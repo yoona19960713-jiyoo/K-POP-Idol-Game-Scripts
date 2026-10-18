@@ -1,0 +1,6 @@
+{
+  "appId": "com.yoona.kpopscripts",
+  "appName": "劇本工坊",
+  "webDir": "www",
+  "android": { "backgroundColor": "#F7F3F8" }
+}

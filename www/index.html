@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>K-POP Idol Game・劇本工坊</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#86507A">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  --paper:#F6F1F4; --card:#FFFFFF; --card2:#FAF6F9; --ink:#2B2130; --muted:#786A7C; --line:#E6DAE3;
+  --accent:#86507A; --accent-ink:#FFFFFF; --accent-soft:#F2E4EE; --good:#2F8460; --bad:#BC3548; --warn:#9A6B12;
+  --serif:"Noto Serif TC","Songti TC",serif; --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#1A151D; --card:#251E29; --card2:#2C2431; --ink:#F2EAF0; --muted:#AA9AAA; --line:#3A3040;
+  --accent:#D69BC2; --accent-ink:#22182A; --accent-soft:#3A2A37; --good:#6BC79E; --bad:#F07A8B; --warn:#E3B45C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#1A151D; --card:#251E29; --card2:#2C2431; --ink:#F2EAF0; --muted:#AA9AAA; --line:#3A3040;
+  --accent:#D69BC2; --accent-ink:#22182A; --accent-soft:#3A2A37; --good:#6BC79E; --bad:#F07A8B; --warn:#E3B45C; color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:980px;margin:0 auto;padding:18px 16px 60px}
+header h1{font-family:var(--serif);font-weight:900;font-size:26px;margin:0;letter-spacing:.02em}
+header p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--muted)}
+.stats b{color:var(--ink);font-size:15px;margin-right:3px}
+section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:16px}
+h2{font-family:var(--serif);font-size:19px;margin:0 0 10px}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--muted);background:var(--card2);cursor:pointer}
+.drop.over{border-color:var(--accent);color:var(--ink)}
+.drop b{color:var(--ink)}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.thumbs figure{margin:0;position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.thumbs img{width:100%;height:100%;object-fit:cover}
+.thumbs button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:13px;line-height:1}
+label.lbl{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
+textarea,input[type=text],input[type=number],select{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+textarea{min-height:64px;resize:vertical}
+.cats{display:flex;flex-wrap:wrap;gap:6px}
+.chipbtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px;font-size:14px}
+.chipbtn[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;font-size:14px}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:default}
+.status{font-size:14px;color:var(--muted);margin-top:10px;white-space:pre-wrap}
+.status.err{color:var(--bad)}
+.note{font-size:12px;color:var(--muted)}
+.cards{display:grid;gap:12px;margin-top:12px}
+.card{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--card2)}
+.card.off{opacity:.5}
+.card-h{display:flex;gap:10px;align-items:flex-start}
+.card-h .grow{flex:1;min-width:0}
+.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px 10px;margin-top:8px}
+.grid2 label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.grid2 input,.grid2 select{padding:6px 8px;font-size:14px}
+.axes{display:grid;grid-template-columns:auto 1fr auto 28px;gap:4px 8px;align-items:center;font-size:12px;margin-top:10px}
+.axes .l{text-align:right;color:var(--muted)}.axes .r{color:var(--muted)}
+.axes input[type=range]{width:100%;accent-color:var(--accent)}
+.axes output{font-variant-numeric:tabular-nums;text-align:right}
+.prompt{margin-top:10px}
+.prompt textarea{font-family:ui-monospace,Menlo,monospace;font-size:12px;min-height:110px;background:var(--card)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.tabs.sub .chipbtn{font-size:13px;padding:4px 10px}
+.tabs .count{opacity:.6;margin-left:4px;font-size:12px}
+.lib{display:grid;gap:8px}
+.li{display:grid;grid-template-columns:56px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:8px;background:var(--card2)}
+.li img,.li .ph{width:56px;height:56px;border-radius:8px;object-fit:cover;background:var(--accent-soft)}
+.li .nm{font-weight:700;font-size:14px}
+.li .meta{font-size:12px;color:var(--muted)}
+.tagrow{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.tag{font-size:11px;border-radius:6px;padding:0 6px;background:var(--accent-soft)}
+.st{font-size:12px;border-radius:999px;padding:1px 8px;border:1px solid currentColor;white-space:nowrap}
+.st0{color:var(--muted)}.st1{color:var(--warn)}.st2{color:#3F7FA8}.st3{color:var(--good)}
+.li .acts{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.filters{display:grid;grid-template-columns:1fr 150px;gap:8px;margin-bottom:10px}
+.empty{color:var(--muted);font-size:14px;padding:16px 0;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:9px 14px;border-radius:10px;font-size:14px;z-index:60;max-width:90vw}
+.hidden{display:none!important}
+#syncNote.err{color:var(--bad)}
+dialog{border:0;border-radius:16px;padding:0;background:var(--card);color:var(--ink);width:min(720px,94vw);max-height:90vh}
+dialog::backdrop{background:rgba(20,12,22,.5)}
+.keybar{margin-top:12px;background:var(--accent-soft);border-radius:12px;padding:10px 12px;font-size:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.steps{margin:6px 0 0;padding-left:20px;font-size:14px}
+.steps li{margin:3px 0}
+.blist{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+.blist li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--card2);font-size:14px}
+.blist li .r{font-size:12px;white-space:nowrap}
+.blist li.run .r{color:var(--accent)}
+.blist li.ok .r{color:var(--good)}
+.blist li.bad .r{color:var(--bad)}
+.blist li .d{font-size:12px;color:var(--muted);grid-column:1/-1}
+dialog .in{padding:16px;overflow:auto;max-height:90vh}
+.topnav{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.topnav .chipbtn{font-size:15px;padding:6px 14px}
+.basegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,190px));gap:12px;margin:8px 0}
+.basebox{border:1px solid var(--line);border-radius:12px;padding:8px;background:var(--card2);display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.basebox img,.basebox .ph{width:100%;aspect-ratio:2/3;object-fit:contain;border-radius:8px;background:var(--accent-soft);display:block}
+.basebox b{font-size:14px}
+.stage{display:flex;justify-content:center;margin-top:8px}
+.stage canvas{width:100%;max-width:420px;height:auto;border-radius:12px;background:var(--card2);border:1px solid var(--line)}
+.imgrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,160px));gap:8px;margin-top:10px}
+.imgbox{border:1px dashed var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.imgbox img,.imgbox .ph{width:100%;aspect-ratio:2/3;object-fit:contain;border-radius:6px;display:block;background:repeating-conic-gradient(var(--card2) 0 25%,var(--card) 0 50%) 0 0/16px 16px}
+.vs{font-size:12px;border-radius:999px;padding:1px 8px;border:1px solid currentColor;white-space:nowrap}
+.vs0{color:var(--muted)}.vs1{color:var(--warn)}.vs2{color:#3F7FA8}.vs3{color:var(--good)}
+.li.on{outline:2px solid var(--accent)}
+#markList .chipbtn{font-size:12px;padding:2px 9px}
+#markList .chipbtn.done{border-color:var(--good)}
+
+.scene{color:var(--muted);font-size:14px;margin:8px 0;padding-left:10px;border-left:3px solid var(--line)}
+.warnl{margin:6px 0;padding-left:18px;font-size:13px;color:var(--warn)}
+.tree{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.node{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--card2)}
+.nk{font-size:12px;color:var(--muted);font-family:ui-monospace,Menlo,monospace}
+.ln{font-size:14px;margin:3px 0}.ln b{margin-right:6px;font-size:13px}.ln.r{margin-left:14px}
+.opt{font-size:14px;margin:6px 0 0;padding:6px 8px;border-radius:8px;background:var(--card)}
+.sty{display:inline-block;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 6px;margin-right:6px}
+.nx{font-size:12px;color:var(--accent);margin-left:6px;font-family:ui-monospace,Menlo,monospace}
+.tbl{overflow-x:auto}.tbl table{border-collapse:collapse;font-size:12px}.tbl th,.tbl td{border:1px solid var(--line);padding:2px 4px;text-align:center;white-space:nowrap}
+.cell{border:0;background:transparent;padding:3px 4px;cursor:pointer;font:inherit;color:inherit}
+.pl{margin:6px 0}.pl b{font-size:12px;display:block}.pl .bub{background:var(--card2);border-radius:4px 12px 12px 12px;padding:6px 10px;display:inline-block}
+.pl.me{text-align:right}.pl.me .bub{background:var(--text,#24182D);color:var(--bg,#fff);border-radius:12px 4px 12px 12px}
+.choices{display:flex;flex-direction:column;gap:6px;margin-top:10px}.choice{border:1px solid var(--line);background:transparent;border-radius:10px;padding:8px 10px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.choice small{color:var(--muted);margin-left:6px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="row" style="justify-content:space-between;align-items:flex-start"><h1>劇本工坊</h1><button class="btn sm" id="openSet">設定</button></div>
+    <p>依成員的口吻與日常層規格,大量生產日常片段;審稿、試玩後收進內容庫,同步給遊戲使用。</p>
+    <div class="stats" id="stats"></div>
+    <div class="note" id="syncNote" style="margin-top:6px"></div>
+    <nav class="topnav" aria-label="切換頁面"><button class="chipbtn" data-tab="make" aria-pressed="true">生產</button><button class="chipbtn" data-tab="lib" aria-pressed="false">內容庫</button><button class="chipbtn" data-tab="cover" aria-pressed="false">覆蓋率</button></nav>
+    <div class="keybar hidden" id="keybar">還沒設定 Gemini API 金鑰,生成功能無法使用。<button class="btn sm pri" id="keyGo">前往設定</button></div>
+  </header>
+
+  <div id="v_make">
+    <section>
+      <h2>產生一批</h2>
+      <label class="lbl">種類</label><div class="cats" id="tType"></div>
+      <div id="rowMember"><label class="lbl">主角</label><div class="cats" id="tMember"></div></div>
+      <div id="rowPair" class="hidden"><label class="lbl">組合</label><div class="cats" id="tPair"></div></div>
+      <div id="rowStage"><label class="lbl">她對代表的關係階段</label><div class="cats" id="tStage"></div></div>
+      <label class="lbl">時期</label><div class="cats" id="tPeriod"></div>
+      <div class="grid2" style="grid-template-columns:120px 1fr;margin-top:10px"><label>數量<input type="number" id="tCount" min="1" max="8"></label><label>補充說明(可不填)<input type="text" id="tHint" placeholder="例如:月評前一晚、下雨天、她剛被老師罵"></label></div>
+      <p class="note" id="cellInfo"></p>
+      <div class="row" style="margin-top:10px"><button class="btn pri" id="go">產生</button><button class="btn hidden" id="stop">停止</button></div>
+      <div class="status" id="status"></div>
+    </section>
+    <section>
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">待審 <span id="revCount"></span></h2><button class="btn sm pri hidden" id="okAll">格式通過的全部收入</button></div>
+      <p class="note">每個片段都可以展開對話樹、試玩、編輯;確認後才會收進內容庫。</p>
+      <div id="review"></div>
+    </section>
+  </div>
+
+  <div id="v_lib" class="hidden">
+    <section>
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">內容庫</h2><button class="btn sm pri" id="expGame">匯出遊戲格式</button></div>
+      <div class="filters" style="margin-top:12px"><select id="fM" aria-label="成員"></select><select id="fT" aria-label="種類"></select><select id="fS" aria-label="階段"></select><input type="text" id="fQ" placeholder="搜尋台詞"></div>
+      <p class="note" id="libInfo"></p>
+      <div id="libList"></div>
+      <p class="note" id="storeNote"></p>
+    </section>
+  </div>
+
+  <div id="v_cover" class="hidden"><section><h2>覆蓋率</h2><div id="cover"></div></section></div>
+</div>
+
+<dialog id="dlg"><div class="in" id="dlgIn"></div></dialog>
+<dialog id="setDlg"><div class="in">
+  <div class="row" style="justify-content:space-between"><h2 style="margin:0">設定</h2><button class="btn sm" id="setClose">關閉</button></div>
+  <h3 style="font-size:15px;margin:16px 0 4px">Gemini API 金鑰</h3>
+  <p class="note">金鑰只存在這台裝置,不會上傳到任何地方。手機和電腦要各自貼一次。</p>
+  <div class="row"><input type="password" id="keyIn" placeholder="貼上金鑰" autocomplete="off" style="flex:1;min-width:200px"><button class="btn sm" id="keyShow">顯示</button></div>
+  <label class="lbl" for="modelIn">使用的模型</label>
+  <select id="modelIn"><option value="gemini-flash-latest">最新 Flash(推薦,自動跟上新版本)</option><option value="gemini-flash-lite-latest">最新 Flash-Lite(較快,每日次數較多)</option><option value="custom">自行輸入…</option></select>
+  <input type="text" id="modelCustom" class="hidden" placeholder="例如 gemini-3.6-flash" style="margin-top:6px">
+  <div class="row" style="margin-top:10px"><button class="btn pri" id="keySave">儲存</button><button class="btn" id="keyTest">測試連線</button><button class="btn danger" id="keyDel">清除金鑰</button></div>
+  <div class="status" id="keyStatus"></div>
+  <details style="margin-top:12px"><summary class="note" style="cursor:pointer">怎麼取得金鑰?</summary>
+    <ol class="steps"><li>用 Google 帳號登入 aistudio.google.com</li><li>左側點「Get API key」</li><li>按「Create API key」,複製那串文字</li><li>貼到上面的框,按儲存,再按測試連線</li></ol>
+    <p class="note">免費層級有每分鐘與每日次數上限,每日額度約在台灣時間下午三、四點重置。免費層級送出的內容可能被 Google 用來改進產品,請不要放私人照片。</p></details>
+  <h3 style="font-size:15px;margin:20px 0 4px">雲端同步</h3>
+  <p class="note">網頁版和手機用同一個帳號登入,資料會自動雙向同步。需要你自己的 Firebase 專案(免費方案即可)。</p>
+  <label class="lbl" for="syCfgIn">Firebase 設定(貼上整段 firebaseConfig)</label>
+  <textarea id="syCfgIn" placeholder="const firebaseConfig = { apiKey: &quot;...&quot;, projectId: &quot;...&quot;, ... }"></textarea>
+  <div class="row" style="margin-top:6px"><button class="btn sm" id="sySaveCfg">儲存設定</button><span class="note" id="syCfgInfo"></span></div>
+  <div id="syIn" style="margin-top:10px"><div class="row"><input type="text" id="syEmail" placeholder="Email" autocomplete="username" style="flex:1;min-width:180px"><input type="password" id="syPw" placeholder="密碼(至少 6 字)" autocomplete="current-password" style="flex:1;min-width:150px"></div>
+    <div class="row" style="margin-top:6px"><button class="btn pri sm" id="sySignIn">登入</button><button class="btn sm" id="sySignUp">第一次使用:建立帳號</button></div></div>
+  <div id="syOut" class="hidden" style="margin-top:10px"><div class="row"><span id="syWho" class="note" style="flex:1"></span><button class="btn pri sm" id="syNow">立即同步</button><button class="btn sm" id="sySignOut">登出</button></div></div>
+  <div class="status" id="syStatus"></div>
+  <h3 style="font-size:15px;margin:20px 0 4px">備份與同步</h3>
+  <p class="note">資料存在這台裝置。要在手機和電腦之間同步,在一邊匯出備份,另一邊匯入即可;同編號的片段會保留較新的版本。</p>
+  <div class="row"><button class="btn" id="bkOut">匯出備份</button><button class="btn" id="bkIn">匯入備份</button><input type="file" id="bkFile" accept=".json,application/json" class="hidden"></div>
+  <div id="apkBox" style="margin-top:20px"><h3 style="font-size:15px;margin:0 0 4px">手機安裝版</h3><p class="note">Android 手機可以下載安裝檔,裝成獨立 App。</p><a class="btn" href="KPOP-Scripts.apk" download style="display:inline-block;text-decoration:none">下載 APK</a></div>
+  <div class="row" style="margin-top:16px"><span class="note" id="verNote"></span><button class="btn sm" id="updCheck">檢查更新</button></div>
+</div></dialog>
+<dialog id="updDlg"><div class="in">
+  <h2 style="margin:0 0 6px">有新版本</h2>
+  <p id="updInfo" style="margin:0"></p>
+  <p class="note" id="updNotes" style="white-space:pre-wrap"></p>
+  <p class="note" id="updHow"></p>
+  <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn" id="updLater">稍後</button><button class="btn" id="updBk">先匯出備份</button><button class="btn pri" id="updGo"></button></div>
+</div></dialog>
+<script src="version.js"></script>
+<script>
+"use strict";
+/* ---------- 狀態 ---------- */
+let items=[];
+const KEY_K="kpopScripts.geminiKey", KEY_M="kpopScripts.model";
+const apiKey=()=>localStorage.getItem(KEY_K)||"";
+const DEFAULT_MODEL="gemini-flash-latest"; // 永遠指向 Google 最新的 Flash,模型汰換時不用改程式
+const RETIRED=["gemini-2.5-flash","gemini-2.5-flash-lite","gemini-2.0-flash","gemini-2.0-flash-lite"];
+const model=()=>{const m=localStorage.getItem(KEY_M)||DEFAULT_MODEL; return RETIRED.includes(m)?DEFAULT_MODEL:m};
+
+/* ---------- 本機資料庫(IndexedDB) ---------- */
+const IDB={db:null,
+  open(){return new Promise((ok,no)=>{const r=indexedDB.open("kpop-scripts",2);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains("items"))db.createObjectStore("items",{keyPath:"code"});if(!db.objectStoreNames.contains("meta"))db.createObjectStore("meta")};r.onsuccess=()=>{this.db=r.result;ok()};r.onerror=()=>no(r.error)})},
+  st(m){return this.db.transaction("items",m).objectStore("items")},
+  req(q){return new Promise((ok,no)=>{q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)})},
+  all(){return this.req(this.st("readonly").getAll())},
+  put(v){return this.req(this.st("readwrite").put(v))},
+  del(k){return this.req(this.st("readwrite").delete(k))},
+ getMeta(k){return this.req(this.db.transaction("meta","readonly").objectStore("meta").get(k))},
+ putMeta(k,v){return this.req(this.db.transaction("meta","readwrite").objectStore("meta").put(v,k))},
+};
+
+/* ---------- Gemini ---------- */
+async function toJpegB64(file){
+  const bmp=await createImageBitmap(file); const s=Math.min(1,1280/Math.max(bmp.width,bmp.height));
+  const c=document.createElement("canvas"); c.width=Math.round(bmp.width*s); c.height=Math.round(bmp.height*s);
+  c.getContext("2d").drawImage(bmp,0,0,c.width,c.height); return c.toDataURL("image/jpeg",0.85).split(",")[1];
+}
+async function aiJSON(prompt,files,signal){
+  const key=apiKey(); if(!key) throw {code:"no_key"};
+  const parts=[{text:prompt}];
+  for(const f of files||[]) parts.push({inline_data:{mime_type:"image/jpeg",data:await toJpegB64(f)}});
+  let res;
+  try{
+    res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model())}:generateContent`,{method:"POST",signal,
+      headers:{"Content-Type":"application/json","x-goog-api-key":key},
+      body:JSON.stringify({contents:[{role:"user",parts}],generationConfig:{responseMimeType:"application/json"}})});
+  }catch(e){ if(e?.name==="AbortError") throw {code:"cancelled"}; throw {code:"network"} }
+  const j=await res.json().catch(()=>({}));
+  if(!res.ok){
+    const raw=JSON.stringify(j); const msg=j?.error?.message||"";
+    if(res.status===429) throw {code:/PerDay|per day|daily/i.test(raw)?"rate_day":"rate_minute",message:msg};
+    if(res.status===401||res.status===403||/API key/i.test(msg)) throw {code:"bad_key",message:msg};
+    if(res.status===404){
+      if(model()!==DEFAULT_MODEL){ localStorage.setItem(KEY_M,DEFAULT_MODEL); return aiJSON(prompt,files,signal); } // 模型被停用時自動改回預設
+      throw {code:"bad_model",message:msg};
+    }
+    if(/location/i.test(msg)) throw {code:"region",message:msg};
+    throw {code:"server",message:msg};
+  }
+  if(j.promptFeedback?.blockReason) throw {code:"blocked"};
+  const c=j.candidates?.[0];
+  if(!c||c.finishReason==="SAFETY"||c.finishReason==="PROHIBITED_CONTENT"||c.finishReason==="BLOCKLIST") throw {code:"blocked"};
+  const text=(c.content?.parts||[]).map(p=>p.text||"").join("");
+  try{return JSON.parse(text)}catch(e){const m=text.match(/[\[{][\s\S]*[\]}]/); if(m){try{return JSON.parse(m[0])}catch(_){}} throw {code:"invalid_json"}}
+}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let tt; function toast(t){let e=$("#toast");if(!e){e=document.createElement("div");e.id="toast";e.className="toast";e.setAttribute("role","status");document.body.appendChild(e)}e.textContent=t;e.classList.remove("hidden");clearTimeout(tt);tt=setTimeout(()=>e.classList.add("hidden"),2600)}
+
+const ERR={no_key:"還沒設定 Gemini API 金鑰,請到右上角「設定」貼上。",bad_key:"金鑰無效或沒有權限,請到設定重新貼上並測試連線。",bad_model:"找不到這個模型名稱,請到設定改回推薦的模型。",rate_minute:"每分鐘次數到上限了,等一分鐘再試。",rate_day:"今天的免費額度用完了,台灣時間下午三、四點後會重置。",blocked:"這次的內容被 Gemini 的安全機制擋下,換張圖或改一下說明再試。",network:"連不上 Gemini,請確認網路。",region:"目前所在地區無法使用 Gemini API。",server:"Gemini 暫時出錯,稍後再試。",not_granted:"沒有允許這個頁面使用 Claude,分析功能無法使用。",sampling_disabled:"這個帳號目前無法使用 Claude。",rate_limited:"使用次數暫時太多,請稍後再試。",image_rejected:"有圖片無法讀取,請換一張(JPG、PNG、WebP)。",images_unavailable:"這個檢視無法傳送圖片。",refused:"這次的內容無法分析,換張圖或改一下說明再試。",invalid_json:"分析結果格式不完整,請再按一次。",prompt_too_large:"說明太長了,請縮短。",session_expired:"請重新登入後再試。"};
+async function copyText(ta){
+  try{await navigator.clipboard.writeText(ta.value);toast("提示詞已複製")}
+  catch(e){ta.focus();ta.select();toast("已選取,請長按或按 Ctrl+C 複製")}
+}
+async function copyText(ta){
+  try{await navigator.clipboard.writeText(ta.value);toast("提示詞已複製")}
+  catch(e){ta.focus();ta.select();toast("已選取,請長按或按 Ctrl+C 複製")}
+}
+/* ---------- 劇本工坊:成員與規格 ---------- */
+const MB=[
+ {id:"ys",n:"藝瑟",en:"Yeseul",c:"#7B4FBF"},{id:"tr",n:"泰梨",en:"Taeri",c:"#C8102E"},{id:"hy",n:"日和",en:"Hiyori",c:"#C9A35E"},
+ {id:"he",n:"夏恩",en:"Haeun",c:"#E9746A"},{id:"hr",n:"河嵐",en:"Haram",c:"#7FAF2C"}];
+const mb=id=>MB.find(m=>m.id===id);
+const VOICE={
+ ys:"徐藝瑟,隊長、領唱、領舞(原型 Dreamcatcher JiU)。開朗愛笑的團媽,責任感很重;藏壓力的方式是笑著把焦點轉到別人身上(「我沒事啦~倒是妳們吃飯了沒?」)。驕傲時說「我是隊長嘛!」;真正脆弱時笑容會突然停住。初期對代表用敬語但語氣明亮,熟了尾音拉長「代表~」。安慰別人的口頭禪「慢慢來,我在」。私下愛粉紅色、追所有女團、酒量好。心結:2013 年出道前三個月被前公司撤銷出道,怕歷史重演。被反過來照顧會手足無措。",
+ tr:"尹泰梨,主 Rapper、領舞(原型 aespa Karina)。長相冷豔完美被叫「AI」,其實害羞、不擅長開口,常被誤會成生氣。初期句子很短「……嗯。」「知道了。」,緊張時耳朵先紅;熟了會冒出冷笑話、奇怪的比喻,講完自己先笑;談舞蹈和歌詞時話變多;常夾英文;害羞時說「……算了,我來。」洛杉磯長大,出道前伴舞影片爆紅。心結:大家只看見那張臉;不喜歡被當商品,花錢和當眾安慰對她反效果。",
+ hy:"早瀨日和,主舞、副唱,日籍(原型 LE SSERAFIM 中村一葉)。芭蕾出身、優雅但團裡最外向好奇。韓語不夠用,常比手畫腳、混日文英文,講錯先笑;會問「代表,這句韓語是什麼意思?」;用韓劇台詞學說話;對每個人都說「好喜歡~」;想讓人放心時說「大丈夫です!」。越重要的事越用笑容帶過。心結:舊傷的腳踝、說不出深一點的心事、怕永遠是外國人。暱稱天鵝。",
+ he:"韓夏恩,門面、C 位、副 Rapper(原型 少女時代 潤娥)。國民初戀型,開朗隨和不做作,對每個人都好;宿舍廚房是她的地盤。被稱讚外表會笑著轉移話題;被當成普通人(例如被唸不吃午餐)反而特別開心;累的時候只會笑得更用力;對熟的人撒嬌,帶一點慶尚道口音;口頭禪「先吃飯再說啦」。大邱烤肉店長女,15 歲照片爆紅也收到惡評。心結:被看成只有臉的 C 位。稱讚她的臉會扣分,對她嚴厲反而有效。",
+ hr:"姜河嵐,主唱、綜藝擔當、老么(原型 Apink 鄭恩地)。濟州出身,大嗓門、直率、有點男孩子氣,對誰都很快用半語,話多語速快愛用擬聲詞,緊張生氣時濟州方言更重;唱歌時完全變一個人。口頭禪「交給我!」。故事開始時才加入兩個月,被說插隊、運氣好。心結:練習時間最短、被注意身材、怕被包裝成不是自己。真正難過時會突然安靜,比哭還嚴重。需要被肯定,嚴厲會讓她受傷。"};
+const PREF={ys:{安慰:1,鼓勵:1.2,嚴厲:.3,開玩笑:1,轉移話題:.5,陪著:1.3,出手幫忙:.5},tr:{安慰:.2,鼓勵:.6,嚴厲:1.1,開玩笑:1.3,轉移話題:.6,陪著:1.1,出手幫忙:-.3},
+ hy:{安慰:.9,鼓勵:1.1,嚴厲:-.4,開玩笑:1,轉移話題:.6,陪著:.9,出手幫忙:1.1},he:{安慰:.7,鼓勵:.9,嚴厲:.9,開玩笑:1.2,轉移話題:.4,陪著:.8,出手幫忙:.7},
+ hr:{安慰:1.2,鼓勵:1.3,嚴厲:-.7,開玩笑:.6,轉移話題:.3,陪著:.9,出手幫忙:1}};
+const STYLES=Object.keys(PREF.ys);
+const STAGES=["戒備","信任","夥伴","心動","戀人"];
+const STAGE_DESC={戒備:"她對代表還有距離,禮貌或冷淡。",信任:"她開始相信代表是好老闆,會說一些工作上的心事。",夥伴:"她把代表當成可以依靠的夥伴,願意說私事。",心動:"她對代表有了心動的感覺,會有曖昧、欲言又止的時刻,但還沒說破。",戀人:"兩人已是戀人,私下親暱自然;表現以情感為主,不露骨。"};
+const PERIODS=["練習生期","出道與上升期","巔峰期","轉型期"];
+const PERIOD_DESC={練習生期:"2015 下半年,還沒出道,每天練習、月評、宿舍生活。",出道與上升期:"2016~2017,剛出道,打歌、綜藝、第一次一位、限韓令、西方市場打開。",巔峰期:"2018~2019,一線女團,頒獎典禮、海外巡演、個人活動機會。",轉型期:"2020 以後,疫情讓舞台消失,線上演唱會、續約與未來的選擇。"};
+const PLACES={practice:"練習室",dorm:"宿舍",studio:"錄音室",office:"辦公室",out:"外面走走",phone:"手機"};
+const SLOTS=["清晨","上午","下午","晚上","深夜"];
+const TYPES={
+ long:{n:"長對話",kind:"single",len:"8~10 個來回(玩家要做 8~10 次選擇),至少兩層分支,不同回應走向不同內容;用錯方式可能提早結束",places:["practice","dorm","studio","office","out"],target:24,batch:2},
+ encounter:{n:"撞見",kind:"single",len:"1~3 個來回",places:["practice","dorm","studio","out"],target:30,batch:5},
+ practice:{n:"練習中",kind:"single",len:"1~3 個來回",places:["practice","studio"],target:30,batch:5},
+ chat:{n:"閒聊",kind:"single",len:"2~3 個來回",places:["office","dorm","practice"],target:30,batch:5},
+ request:{n:"請求",kind:"single",len:"1~3 個來回",places:["office","dorm","practice"],target:30,batch:5},
+ friction:{n:"小摩擦",kind:"single",len:"1~3 個來回,另一位成員一起出現",places:["practice","dorm"],target:30,batch:5},
+ surprise:{n:"驚喜",kind:"single",len:"1~3 個來回",places:["dorm","office","practice"],target:30,batch:5},
+ worry:{n:"心事",kind:"single",len:"2~4 個來回,她說出一點點真心話",places:["out","dorm","practice"],target:30,batch:5},
+ social:{n:"社群",kind:"single",len:"1~2 個來回,她的貼文、直播或粉絲通訊與粉絲反應(依時期:2015 年是直播平台剛起步,2020 年後有粉絲通訊 App)",places:["phone"],target:30,batch:5},
+ msg:{n:"訊息",kind:"single",len:"1~3 個來回的手機訊息",places:["phone"],target:44,batch:6},
+ topic:{n:"再聊一下",kind:"single",len:"2~3 個來回的日常話題,接在其他對話後面",places:["practice","dorm","office","studio","out"],target:20,batch:4},
+ between:{n:"成員之間",kind:"pair",len:"2~4 個來回,主要是成員之間對話,代表在旁邊,最後才有選項",places:["practice","dorm","studio"],target:40,batch:4},
+ group:{n:"群組聊天",kind:"pair",len:"團體聊天室裡多人的訊息,1~2 次選擇",places:["phone"],target:30,batch:4},
+ pairlong:{n:"雙人長對話",kind:"pair",len:"8~10 個來回(玩家要做 8~10 次選擇),兩位成員和代表一起,至少兩層分支,成員之間也會互相回應",places:["practice","dorm","studio","out"],target:20,batch:2},
+ away:{n:"你不在場時",kind:"pair",len:"一段兩三句的旁白,描述代表不在時發生的事,沒有選項",places:["practice","dorm","studio"],target:30,batch:6}};
+const PAIRS=[];for(let i=0;i<MB.length;i++)for(let j=i+1;j<MB.length;j++)PAIRS.push(MB[i].id+"-"+MB[j].id);PAIRS.push("all");
+const pairName=p=>p==="all"?"全團":p.split("-").map(x=>mb(x).n).join("×");
+const SINGLE_TYPES=Object.keys(TYPES).filter(k=>TYPES[k].kind==="single"), PAIR_TYPES=Object.keys(TYPES).filter(k=>TYPES[k].kind==="pair");
+
+/* ---------- 格式檢查 ---------- */
+function analyse(sn){
+  const w=[]; const N=sn.nodes||{}; if(!N.start) return {depth:0,branch:0,warn:["沒有 start 節點"]};
+  const ids=new Set(MB.map(m=>m.id));
+  for(const [k,n] of Object.entries(N)){
+    if(!Array.isArray(n.L)) w.push(`節點 ${k} 沒有台詞`);
+    for(const l of n.L||[]) if(!ids.has(l[0])) w.push(`節點 ${k} 有不認得的說話者 ${l[0]}`);
+    for(const c of n.C||[]){ if(!STYLES.includes(c.s)) w.push(`選項「${(c.t||"").slice(0,10)}」的回應方式不合法`);
+      if(c.next&&!N[c.next]) w.push(`選項指向不存在的節點 ${c.next}`);
+      if(c.to&&!ids.has(c.to)) w.push(`選項對象 ${c.to} 不存在`);
+      if((c.g||0)>4||(c.g||0)<-2) w.push(`選項「${(c.t||"").slice(0,10)}」的影響強度 ${c.g} 超出 -2~4`); }
+  }
+  const memo={}; const depth=(k,seen)=>{if(seen.has(k)||!N[k])return 0; seen.add(k); let m=0; for(const c of N[k].C||[]) m=Math.max(m,1+(c.next?depth(c.next,new Set(seen)):0)); return m};
+  const d=depth("start",new Set()); const branch=Object.values(N).filter(n=>(n.C||[]).filter(c=>c.next).length>=2).length;
+  if(sn.type==="long"||sn.type==="pairlong"){ if(d<8) w.push(`最長只有 ${d} 個來回,長對話要 8~10 個`); if(d>11) w.push(`最長 ${d} 個來回,超過 10 個`); if(branch<2) w.push(`只有 ${branch} 個分岔點,長對話至少要 2 個`) }
+  if(sn.type==="away"&&(N.start.C||[]).length) w.push("你不在場時的片段不應該有選項");
+  return {depth:d,branch,warn:w};
+}
+
+/* ---------- 生成提示詞 ---------- */
+function buildPrompt(p,existing){
+  const t=TYPES[p.type]; const who=t.kind==="pair"?(p.pair==="all"?MB.map(m=>m.id):p.pair.split("-")):[p.member];
+  const voices=who.map(id=>`【${id}】${VOICE[id]}\n她對回應方式的反應倍率(負數是反效果):${Object.entries(PREF[id]).map(([k,v])=>k+v).join("、")}`).join("\n\n");
+  return `你是一款韓國女團養成遊戲的編劇。玩家是一位財閥出身的娛樂公司代表(成員叫他/她「代表」,性別不指定),旗下五位女團成員都是成年人(故事開始時 18 歲)。請用繁體中文寫遊戲的日常片段。
+
+【這批要寫的】
+種類:${t.n}(${t.len})
+${t.kind==="pair"?`主角組合:${pairName(p.pair)}`:`主角:${mb(p.member).n}(id ${p.member})`}
+${t.kind==="single"?`她對代表的關係階段:${p.stage}——${STAGE_DESC[p.stage]}`:`成員之間的互動為主;代表在場時的語氣依一般信任階段。`}
+時期:${p.period}——${PERIOD_DESC[p.period]}
+數量:${p.count} 個,彼此情境要明顯不同。
+可用地點(at):${t.places.map(k=>`${k}=${PLACES[k]}`).join("、")};時段(sl,數字):0 清晨、1 上午、2 下午、3 晚上、4 深夜。
+${p.hint?`玩家補充:${p.hint}\n`:""}
+【成員設定與口吻,必須嚴格遵守】
+${voices}
+
+其他成員 id:${MB.map(m=>`${m.id}=${m.n}`).join("、")}。
+
+【寫作規則】
+- 口吻要像她本人,會因關係階段改變語氣;每句台詞自然、口語、有生活感,不要說教。
+- 選項是代表說的話或做的動作(用「」包住說的話,或寫動作),每個選項標一種回應方式 s,只能是:${STYLES.join("、")}。
+- 每個選項的她的回應 r 要反映她對這種回應方式的真實反應(依上面的倍率,負數就寫成她不舒服或拉開距離)。
+- 影響強度 g 是整數 -2~4;心情 mood、壓力 stress 可省略或填 -6~6 的整數;只有特別心動的時刻才填 heart 1~2,而且只在信任、夥伴以上階段。
+- 可以用 set 記下一個英文小寫駝峰的記憶旗標(例如 hyAnkleAsk),讓之後的劇情記得這件事。
+- 多輪對話用 nodes 樹狀結構:每個節點有 L(台詞陣列)和 C(選項陣列),選項用 next 指向下一個節點的鍵名,沒有 next 就結束,結束時可以用 r 寫她最後的反應。
+- ${t.kind==="pair"?"L 裡可以有多位成員輪流說話。":"L 裡以主角為主,其他成員可以偶爾出現。"}
+- 以情感為主,不寫露骨內容;不要出現真實的人名、團名或公司名。
+${existing.length?`- 這一格已經有以下情境,請避免重複:\n${existing.map(x=>"  · "+x).join("\n")}`:""}
+
+【只回覆 JSON】
+{"snippets":[{"at":"practice","sl":[3,4],"who":["${who[0]}"],"sc":"一句描述畫面的旁白","w":3,"cd":4,"nodes":{"start":{"L":[["${who[0]}","台詞"]],"C":[{"t":"「代表說的話」","s":"陪著","to":"${who[0]}","g":2,"next":"b"},{"t":"(動作)","s":"開玩笑","to":"${who[0]}","g":1,"r":[["${who[0]}","她的反應"]]}]},"b":{"L":[["${who[0]}","台詞"]],"C":[{"t":"「……」","s":"鼓勵","to":"${who[0]}","g":3,"set":"someFlag","r":[["${who[0]}","她最後的反應"]]}]}}}]}`;
+}
+
+/* ---------- 狀態與介面 ---------- */
+let tab="make", reviewQ=[];
+let P={type:"long",member:"ys",pair:"ys-tr",stage:"戒備",period:"練習生期",count:2,hint:""};
+const lib=()=>items.filter(x=>x.status==="ok");
+function cellKey(sn){return sn.type+"|"+(TYPES[sn.type]?.kind==="pair"?sn.pair:sn.member)+"|"+(TYPES[sn.type]?.kind==="pair"?"":sn.stage)}
+function chips(el,list,cur,key,label){$(el).innerHTML=list.map(v=>`<button class="chipbtn" data-${key}="${v}" aria-pressed="${v===cur}">${label?label(v):v}</button>`).join("")}
+function renderMake(){
+  const t=TYPES[P.type];
+  chips("#tType",Object.keys(TYPES),P.type,"ty",k=>TYPES[k].n);
+  $("#rowMember").classList.toggle("hidden",t.kind!=="single"); $("#rowPair").classList.toggle("hidden",t.kind!=="pair"); $("#rowStage").classList.toggle("hidden",t.kind!=="single");
+  chips("#tMember",MB.map(m=>m.id),P.member,"mm",id=>mb(id).n);
+  chips("#tPair",PAIRS,P.pair,"pp",pairName);
+  chips("#tStage",STAGES,P.stage,"st"); chips("#tPeriod",PERIODS,P.period,"pe");
+  $("#tCount").value=P.count; $("#tHint").value=P.hint;
+  const have=lib().filter(x=>x.type===P.type&&(t.kind==="pair"?x.pair===P.pair:(x.member===P.member&&x.stage===P.stage))).length;
+  $("#cellInfo").textContent=`這一格目前有 ${have} 個,目標 ${t.target} 個。`;
+  document.querySelectorAll("[data-ty]").forEach(b=>b.onclick=()=>{P.type=b.dataset.ty;P.count=TYPES[P.type].batch;renderMake()});
+  document.querySelectorAll("[data-mm]").forEach(b=>b.onclick=()=>{P.member=b.dataset.mm;renderMake()});
+  document.querySelectorAll("[data-pp]").forEach(b=>b.onclick=()=>{P.pair=b.dataset.pp;renderMake()});
+  document.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{P.stage=b.dataset.st;renderMake()});
+  document.querySelectorAll("[data-pe]").forEach(b=>b.onclick=()=>{P.period=b.dataset.pe;renderMake()});
+}
+$("#tCount").oninput=e=>P.count=Math.max(1,Math.min(8,+e.target.value||1)); $("#tHint").oninput=e=>P.hint=e.target.value;
+let ctl=null;
+async function generate(params){
+  if(!apiKey()){openSettings();toast("先在設定貼上 Gemini API 金鑰");return}
+  const t=TYPES[params.type];
+  const existing=lib().filter(x=>x.type===params.type&&(t.kind==="pair"?x.pair===params.pair:(x.member===params.member&&x.stage===params.stage))).slice(-25).map(x=>x.sc);
+  ctl=new AbortController(); $("#go").disabled=true; $("#stop").classList.remove("hidden");
+  const st=$("#status"); st.classList.remove("err"); st.textContent=`生成中…${t.n}通常需要${params.type==="long"?"半分鐘到一分鐘":"十幾秒"}。`;
+  try{
+    const r=await aiJSON(buildPrompt(params,existing),[],ctl.signal);
+    const arr=Array.isArray(r)?r:(r.snippets||[]); let n=0;
+    for(const s0 of arr){ if(!s0?.nodes?.start) continue;
+      const sn={code:`${params.type}-${t.kind==="pair"?params.pair:params.member}-${Date.now().toString(36)}${Math.random().toString(36).slice(2,5)}`,
+        type:params.type,k:t.n,member:t.kind==="single"?params.member:"",pair:t.kind==="pair"?params.pair:"",stage:t.kind==="single"?params.stage:"",period:params.period,
+        at:t.places.includes(s0.at)?s0.at:t.places[0],sl:(Array.isArray(s0.sl)?s0.sl:[2]).filter(x=>x>=0&&x<=4),who:Array.isArray(s0.who)?s0.who.filter(x=>mb(x)):[params.member],
+        sc:String(s0.sc||""),w:+s0.w||3,cd:+s0.cd||4,nodes:s0.nodes,status:"review",createdAt:Date.now(),params:{...params}};
+      reviewQ.push(sn); n++ }
+    st.textContent=n?`產生了 ${n} 個,請到下方審稿。`:"這次沒有產生可用的片段,請再試一次。"; renderReview();
+  }catch(e){ if(e?.code==="cancelled") st.textContent="已停止。"; else {st.textContent=ERR[e?.code]||"生成失敗,請再試一次。";st.classList.add("err")} }
+  finally{ $("#go").disabled=false; $("#stop").classList.add("hidden") }
+}
+$("#go").onclick=()=>generate({...P}); $("#stop").onclick=()=>ctl?.abort();
+
+/* 預覽:把節點樹畫出來 */
+function treeHTML(sn){
+  const N=sn.nodes||{}; const order=["start",...Object.keys(N).filter(k=>k!=="start")];
+  return order.filter(k=>N[k]).map(k=>{const n=N[k];
+    return `<div class="node"><div class="nk">${k==="start"?"開始":k}</div>${(n.L||[]).map(([id,tx])=>`<div class="ln"><b style="color:${mb(id)?.c||"inherit"}">${esc(mb(id)?.n||id)}</b>${esc(tx)}</div>`).join("")}
+      ${(n.C||[]).map(c=>`<div class="opt"><span class="sty">${esc(c.s)}${c.to&&mb(c.to)?"→"+mb(c.to).n:""}・${c.g>0?"+":""}${c.g||0}${c.heart?"・心動+"+c.heart:""}${c.set?"・旗標 "+esc(c.set):""}</span>${esc(c.t)}
+        ${c.next?`<span class="nx">→ ${esc(c.next)}</span>`:(c.r||[]).map(([id,tx])=>`<div class="ln r"><b style="color:${mb(id)?.c||"inherit"}">${esc(mb(id)?.n||id)}</b>${esc(tx)}</div>`).join("")||`<span class="nx">結束</span>`}</div>`).join("")}</div>`}).join("");
+}
+function cardHTML(sn,mode){
+  const a=analyse(sn); const who=sn.pair?pairName(sn.pair):mb(sn.member)?.n;
+  return `<div class="card sn" data-code="${esc(sn.code)}">
+    <div class="row" style="justify-content:space-between;align-items:flex-start"><div><b>${esc(TYPES[sn.type]?.n||sn.type)}・${esc(who)}${sn.stage?"・"+esc(sn.stage):""}・${esc(sn.period)}</b>
+      <div class="note">${esc(PLACES[sn.at]||sn.at)}・${(sn.sl||[]).map(x=>SLOTS[x]).join("、")}・最長 ${a.depth} 個來回・${a.branch} 個分岔點</div></div>
+      <span class="vs ${a.warn.length?"vs1":"vs3"}">${a.warn.length?"有 "+a.warn.length+" 個提醒":"格式通過"}</span></div>
+    <p class="scene">${esc(sn.sc)}</p>
+    ${a.warn.length?`<ul class="warnl">${a.warn.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}
+    <details ${mode==="review"?"open":""}><summary class="note">展開對話樹</summary><div class="tree">${treeHTML(sn)}</div></details>
+    <div class="row" style="margin-top:8px">${mode==="review"?`<button class="btn sm pri" data-ok>收入內容庫</button><button class="btn sm" data-regen>這格再生一個</button>`:""}
+      <button class="btn sm" data-play>試玩</button><button class="btn sm" data-edit>編輯</button><button class="btn sm danger" data-drop>${mode==="review"?"丟掉":"刪除"}</button></div></div>`;
+}
+function bindCards(root,mode){
+  root.querySelectorAll(".sn").forEach(card=>{
+    const code=card.dataset.code; const get=()=>mode==="review"?reviewQ.find(x=>x.code===code):items.find(x=>x.code===code);
+    const ok=card.querySelector("[data-ok]"); if(ok) ok.onclick=async()=>{const sn=get(); sn.status="ok"; await saveItem(sn); reviewQ=reviewQ.filter(x=>x.code!==code); renderReview(); toast("已收入內容庫")};
+    const rg=card.querySelector("[data-regen]"); if(rg) rg.onclick=()=>{const sn=get(); generate({...sn.params,count:1})};
+    card.querySelector("[data-play]").onclick=()=>play(get());
+    card.querySelector("[data-edit]").onclick=()=>editJSON(get(),mode);
+    card.querySelector("[data-drop]").onclick=async()=>{ if(mode==="review"){reviewQ=reviewQ.filter(x=>x.code!==code);renderReview()} else {await removeItem(code);toast("已刪除")} };
+  });
+}
+function renderReview(){
+  $("#revCount").textContent=reviewQ.length?`(${reviewQ.length})`:"";
+  $("#review").innerHTML=reviewQ.length?reviewQ.map(sn=>cardHTML(sn,"review")).join(""):`<div class="empty">還沒有待審的片段。</div>`;
+  bindCards($("#review"),"review");
+  $("#okAll").classList.toggle("hidden",!reviewQ.some(x=>!analyse(x).warn.length));
+}
+$("#okAll").onclick=async()=>{const pass=reviewQ.filter(x=>!analyse(x).warn.length); for(const sn of pass){sn.status="ok"; await saveItem(sn)} reviewQ=reviewQ.filter(x=>analyse(x).warn.length); renderReview(); toast(`收入 ${pass.length} 個`)};
+
+/* 編輯 JSON */
+function editJSON(sn,mode){
+  const {nodes,sc,at,sl,who,w,cd}=sn;
+  $("#dlgIn").innerHTML=`<h2 style="margin:0 0 6px">編輯片段</h2><p class="note">直接修改台詞、選項或節點,存檔前會檢查格式。</p>
+    <textarea id="ej" style="width:100%;min-height:55vh;font-family:ui-monospace,Menlo,monospace;font-size:12px">${esc(JSON.stringify({sc,at,sl,who,w,cd,nodes},null,2))}</textarea>
+    <div class="row" style="margin-top:8px;justify-content:flex-end"><button class="btn" id="ejc">取消</button><button class="btn pri" id="ejs">儲存</button></div>`;
+  $("#ejc").onclick=()=>$("#dlg").close();
+  $("#ejs").onclick=async()=>{try{const o=JSON.parse($("#ej").value); Object.assign(sn,o); if(mode==="lib") await saveItem(sn); else renderReview(); $("#dlg").close(); toast("已更新")}catch(e){toast("JSON 格式有誤,請檢查逗號與括號")}};
+  if(!$("#dlg").open) $("#dlg").showModal();
+}
+
+/* 試玩 */
+const tv={};
+function play(sn){
+  for(const m of MB) tv[m.id]={trust:0,heart:0,mood:0};
+  const N=sn.nodes; let html=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">試玩</h2><button class="btn sm" id="pc">關閉</button></div><p class="scene">${esc(sn.sc)}</p>`;
+  const lines=L=>(L||[]).map(([id,t])=>`<div class="pl"><b style="color:${mb(id)?.c}">${esc(mb(id)?.n||id)}</b><div class="bub">${esc(t)}</div></div>`).join("");
+  const show=k=>{const n=N[k]; if(!n){finishP();return}
+    html+=lines(n.L)+`<div class="choices" id="pch">${(n.C||[]).map((c,i)=>`<button class="choice" data-pc="${i}">${esc(c.t)}<small>${esc(c.s)}</small></button>`).join("")}</div>`;
+    $("#dlgIn").innerHTML=html; $("#pc").onclick=()=>$("#dlg").close();
+    if(!(n.C||[]).length){finishP();return}
+    document.querySelectorAll("[data-pc]").forEach(b=>b.onclick=()=>{const c=n.C[+b.dataset.pc]; const to=c.to||sn.who?.[0]; const p=PREF[to]?.[c.s]??.5;
+      tv[to].trust+=Math.round((c.g||0)*p*.6); tv[to].heart+=c.heart||0; tv[to].mood+=c.mood||Math.round((c.g||0)*p*1.5);
+      html=html.replace(/<div class="choices" id="pch">[\s\S]*<\/div>$/,"")+`<div class="pl me"><div class="bub">${esc(c.t)}</div></div>`+lines(c.r);
+      if(c.next) show(c.next); else finishP()})};
+  const finishP=()=>{const fx=MB.filter(m=>tv[m.id].trust||tv[m.id].heart||tv[m.id].mood).map(m=>`${m.n} 信任 ${tv[m.id].trust>=0?"+":""}${tv[m.id].trust}${tv[m.id].heart?"、心動 +"+tv[m.id].heart:""}、心情 ${tv[m.id].mood>=0?"+":""}${tv[m.id].mood}`).join(";");
+    $("#dlgIn").innerHTML=html.replace(/<div class="choices" id="pch">[\s\S]*<\/div>$/,"")+`<p class="note" style="margin-top:12px">結束。${fx||"沒有明顯變化"}</p><div class="row"><button class="btn" id="again">再玩一次</button><button class="btn pri" id="pc2">關閉</button></div>`;
+    $("#again").onclick=()=>play(sn); $("#pc2").onclick=()=>$("#dlg").close()};
+  show("start"); if(!$("#dlg").open) $("#dlg").showModal();
+}
+
+/* 內容庫與覆蓋率 */
+function renderLib(){
+  const fm=$("#fM").value, ft=$("#fT").value, fs=$("#fS").value, q=$("#fQ").value.trim();
+  const list=lib().filter(x=>(!fm||x.member===fm||(x.pair||"").includes(fm))&&(!ft||x.type===ft)&&(!fs||x.stage===fs)&&(!q||JSON.stringify(x.nodes).includes(q)||x.sc.includes(q)))
+    .sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  $("#libInfo").textContent=`內容庫共 ${lib().length} 個,符合條件 ${list.length} 個${list.length>60?",只顯示最新 60 個":""}。`;
+  $("#libList").innerHTML=list.slice(0,60).map(sn=>cardHTML(sn,"lib")).join("")||`<div class="empty">還沒有內容。</div>`;
+  bindCards($("#libList"),"lib");
+}
+["fM","fT","fS"].forEach(id=>$("#"+id).onchange=renderLib); $("#fQ").oninput=renderLib;
+$("#fM").innerHTML='<option value="">全部成員</option>'+MB.map(m=>`<option value="${m.id}">${m.n}</option>`).join("");
+$("#fT").innerHTML='<option value="">全部種類</option>'+Object.entries(TYPES).map(([k,t])=>`<option value="${k}">${t.n}</option>`).join("");
+$("#fS").innerHTML='<option value="">全部階段</option>'+STAGES.map(s=>`<option>${s}</option>`).join("");
+function heat(n,t){const r=Math.min(1,n/t);return `background:color-mix(in srgb, var(--good) ${Math.round(r*85)}%, var(--card2))`}
+function renderCover(){
+  const L=lib(); const cnt={}; for(const x of L){const k=cellKey(x); cnt[k]=(cnt[k]||0)+1}
+  let total=0,done=0;
+  let h=`<h3>單人片段(成員 × 關係階段 × 種類)</h3><div class="tbl"><table><thead><tr><th>成員</th><th>階段</th>${SINGLE_TYPES.map(k=>`<th>${TYPES[k].n}</th>`).join("")}</tr></thead><tbody>`;
+  for(const m of MB) for(const s of STAGES){ h+=`<tr><td>${m.n}</td><td>${s}</td>`+SINGLE_TYPES.map(k=>{const n=cnt[k+"|"+m.id+"|"+s]||0,t=TYPES[k].target; total+=t; done+=Math.min(n,t);
+      return `<td style="${heat(n,t)}"><button class="cell" data-cell="${k}|${m.id}|${s}" title="${m.n}・${s}・${TYPES[k].n}">${n}/${t}</button></td>`}).join("")+`</tr>` }
+  h+=`</tbody></table></div><h3 style="margin-top:16px">雙人與全團</h3><div class="tbl"><table><thead><tr><th>組合</th>${PAIR_TYPES.map(k=>`<th>${TYPES[k].n}</th>`).join("")}</tr></thead><tbody>`;
+  for(const p of PAIRS){ h+=`<tr><td>${pairName(p)}</td>`+PAIR_TYPES.map(k=>{const n=cnt[k+"|"+p+"|"]||0,t=p==="all"?TYPES[k].target*5:TYPES[k].target; total+=t; done+=Math.min(n,t);
+      return `<td style="${heat(n,t)}"><button class="cell" data-pcell="${k}|${p}">${n}/${t}</button></td>`}).join("")+`</tr>` }
+  h+=`</tbody></table></div>`;
+  $("#cover").innerHTML=`<p class="note">整體進度 ${done}/${total}(${Math.round(done/total*100)}%)。點任一格可以直接到生產頁產生那一格的內容。</p>`+h;
+  document.querySelectorAll("[data-cell]").forEach(b=>b.onclick=()=>{const [k,m,s]=b.dataset.cell.split("|");P={...P,type:k,member:m,stage:s,count:TYPES[k].batch};showTab("make")});
+  document.querySelectorAll("[data-pcell]").forEach(b=>b.onclick=()=>{const [k,p]=b.dataset.pcell.split("|");P={...P,type:k,pair:p,count:TYPES[k].batch};showTab("make")});
+}
+function renderStats(){const L=lib();$("#stats").innerHTML=`<span><b>${L.length}</b>內容庫</span><span><b>${reviewQ.length}</b>待審</span><span><b>${L.filter(x=>x.type==="long").length}</b>長對話</span>`}
+function showTab(t){tab=t; document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===t));
+  ["make","lib","cover"].forEach(k=>$("#v_"+k).classList.toggle("hidden",k!==t)); renderAll(); window.scrollTo(0,0)}
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+function renderAll(){renderStats(); if(tab==="make"){renderMake();renderReview()} if(tab==="lib") renderLib(); if(tab==="cover") renderCover()}
+
+/* 儲存 */
+async function saveItem(it){const body={...it}; body.updatedAt=Date.now(); await IDB.put(body); syMark(body.code);
+  const i=items.findIndex(x=>x.code===body.code); if(i>=0) items[i]=body; else items.push(body); renderAll()}
+async function removeItem(code){await IDB.del(code); syTomb(code); items=items.filter(x=>x.code!==code); renderAll()}
+/* 給同步程式用的相容欄位 */
+let members=[], stdBase={img:"",marks:{}}; const MEM_IDS=[], MEM_DEF=[]; let view="make";
+function renderNav(){} function showView(){renderAll()}
+async function saveMeta(){}
+
+/* 匯出遊戲格式 */
+$("#expGame").onclick=()=>offer(`日常內容庫_${stampName()}.json`,new Blob([JSON.stringify({format:"kpop-daily-v1",exported:new Date().toISOString(),snippets:lib().map(({code,type,k,member,pair,stage,period,at,sl,who,sc,w,cd,nodes})=>({id:code,type,k,member,pair,stage,period,at,sl,who,sc,w,cd,nodes}))},null,1)],{type:"application/json"}));
+const stampName=()=>new Date().toISOString().slice(0,10);
+function blobToB64(blob){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]);r.onerror=()=>no(r.error);r.readAsDataURL(blob)})}
+async function offer(filename,blob){
+  try{
+    const P=window.Capacitor?.Plugins;
+    if(P?.Filesystem&&P?.Share){ // 手機安裝版:存成檔案後叫出分享選單(可存到雲端硬碟或傳給自己)
+      const r=await P.Filesystem.writeFile({path:filename,data:await blobToB64(blob),directory:"CACHE"});
+      await P.Share.share({title:filename,url:r.uri,dialogTitle:"匯出檔案"}); return;
+    }
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+  }catch(e){ if(!/cancel/i.test(String(e?.message||e))) toast("匯出失敗") }
+}
+/* ---------- 設定 ---------- */
+const setDlg=$("#setDlg");
+function syncKeybar(){$("#keybar").classList.toggle("hidden",!!apiKey())}
+function openSettings(){
+  $("#keyIn").value=apiKey(); $("#keyStatus").textContent="";
+  const m=model(), known=["gemini-flash-latest","gemini-flash-lite-latest"].includes(m);
+  $("#modelIn").value=known?m:"custom"; $("#modelCustom").value=known?"":m; $("#modelCustom").classList.toggle("hidden",known);
+  if(!setDlg.open) setDlg.showModal();
+}
+$("#openSet").onclick=openSettings; $("#keyGo").onclick=openSettings; $("#setClose").onclick=()=>setDlg.close();
+$("#keyShow").onclick=()=>{const k=$("#keyIn");k.type=k.type==="password"?"text":"password";$("#keyShow").textContent=k.type==="password"?"顯示":"隱藏"};
+$("#modelIn").onchange=()=>$("#modelCustom").classList.toggle("hidden",$("#modelIn").value!=="custom");
+function saveSettings(){
+  const k=$("#keyIn").value.trim(); if(k) localStorage.setItem(KEY_K,k);
+  const m=$("#modelIn").value==="custom"?$("#modelCustom").value.trim():$("#modelIn").value; if(m) localStorage.setItem(KEY_M,m);
+  syncKeybar();
+}
+$("#keySave").onclick=()=>{saveSettings();$("#keyStatus").classList.remove("err");$("#keyStatus").textContent="已儲存。";};
+$("#keyDel").onclick=()=>{localStorage.removeItem(KEY_K);$("#keyIn").value="";syncKeybar();$("#keyStatus").textContent="金鑰已清除。"};
+$("#keyTest").onclick=async()=>{
+  saveSettings(); const st=$("#keyStatus"); st.classList.remove("err"); st.textContent="測試中…";
+  try{const r=await aiJSON('只回覆 JSON:{"ok":true}',[]); st.textContent=r?.ok?`連線成功,使用 ${model()}。`:"有回應,但格式不如預期,仍可試用。"}
+  catch(e){st.classList.add("err"); st.textContent=ERR[e?.code]||"測試失敗。"+(e?.message?`(${e.message})`:"")}
+};
+$("#bkOut").onclick=()=>offer(`劇本工坊備份_${stampName()}.json`,new Blob([JSON.stringify({app:"kpop-scripts",ver:1,exported:new Date().toISOString(),items})],{type:"application/json"}));
+$("#bkIn").onclick=()=>$("#bkFile").click();
+$("#bkFile").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{ const o=JSON.parse(await f.text()); if(o.app!=="kpop-scripts"||!Array.isArray(o.items)) throw 0;
+    let n=0; for(const it of o.items){ if(!it?.code) continue; const cur=items.find(x=>x.code===it.code);
+      if(!cur||(it.updatedAt||0)>(cur.updatedAt||0)){await IDB.put(it); await syMark(it.code); n++} }
+    items=await IDB.all(); renderAll(); toast(`匯入完成,更新了 ${n} 個`);
+  }catch(err){toast("這不是劇本工坊的備份檔")}
+};
+$("#verNote").textContent="版本 "+(window.APP_VERSION||"開發版");
+/* ---------- 雲端同步(Firebase:Email 登入 + Firestore) ---------- */
+const SY_CFG="kpopSync.cfg", SY_AUTH="kpopSync.auth", SY_PULL="kpopSync.lastPull", SY_INIT="kpopSync.init";
+const syCfg=()=>{try{return JSON.parse(localStorage.getItem(SY_CFG)||"null")}catch(e){return null}};
+const syAuth=()=>{try{return JSON.parse(localStorage.getItem(SY_AUTH)||"null")}catch(e){return null}};
+let syTok=null, syBusy=false, syAgain=false, syTimer=0, syLast=0;
+const SY_ERR={EMAIL_EXISTS:"這個 Email 已經註冊過,請直接登入。",INVALID_LOGIN_CREDENTIALS:"Email 或密碼錯誤。",INVALID_PASSWORD:"Email 或密碼錯誤。",EMAIL_NOT_FOUND:"Email 或密碼錯誤。",
+  WEAK_PASSWORD:"密碼至少要 6 個字元。",INVALID_EMAIL:"Email 格式不對。",OPERATION_NOT_ALLOWED:"Firebase 還沒開啟「電子郵件/密碼」登入方式。",
+  API_KEY_INVALID:"Firebase 設定的 apiKey 不正確。",PERMISSION_DENIED:"Firestore 的安全規則擋住了,請照說明貼上規則。",NOT_FOUND:"找不到 Firestore 資料庫,請先在 Firebase 建立 Firestore。",
+  TOKEN_EXPIRED:"登入已過期,請重新登入。",USER_NOT_FOUND:"帳號不存在,請重新登入。",network:"連不上雲端,請確認網路。"};
+function syMsg(e){const c=String(e?.code||e?.message||e||"");for(const k of Object.keys(SY_ERR)) if(c.includes(k)) return SY_ERR[k];return "同步失敗:"+c.slice(0,80)}
+async function syJSON(url,opt){
+  let r; try{r=await fetch(url,opt)}catch(e){throw {code:"network"}}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){const m=j?.error?.message||j?.error?.status||(Array.isArray(j)&&j[0]?.error?.status)||("HTTP "+r.status);throw {code:String(m),status:r.status}}
+  return j;
+}
+async function sySignIn(email,pw,create){
+  const c=syCfg(); if(!c?.apiKey||!c?.projectId) throw {code:"請先貼上 Firebase 設定"};
+  const j=await syJSON(`https://identitytoolkit.googleapis.com/v1/accounts:${create?"signUp":"signInWithPassword"}?key=${encodeURIComponent(c.apiKey)}`,
+    {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password:pw,returnSecureToken:true})});
+  localStorage.setItem(SY_AUTH,JSON.stringify({uid:j.localId,email:j.email,refreshToken:j.refreshToken}));
+  syTok={id:j.idToken,exp:Date.now()+(+j.expiresIn-60)*1000};
+}
+async function syToken(){
+  const a=syAuth(), c=syCfg(); if(!a||!c) throw {code:"未登入"};
+  if(syTok&&syTok.exp>Date.now()) return syTok.id;
+  const j=await syJSON(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(c.apiKey)}`,
+    {method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"grant_type=refresh_token&refresh_token="+encodeURIComponent(a.refreshToken)});
+  a.refreshToken=j.refresh_token; localStorage.setItem(SY_AUTH,JSON.stringify(a));
+  syTok={id:j.id_token,exp:Date.now()+(+j.expires_in-60)*1000}; return syTok.id;
+}
+function syBase(){const c=syCfg(),a=syAuth();return `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(c.projectId)}/databases/(default)/documents/users/${a.uid}`}
+async function syFS(method,path,body){
+  const t=await syToken();
+  return syJSON(syBase()+path,{method,headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:body?JSON.stringify(body):undefined});
+}
+async function syGetDoc(path){try{return await syFS("GET",path)}catch(e){if(e.status===404) return null;throw e}}
+const syStr=v=>({stringValue:v}), syInt=v=>({integerValue:String(Math.round(v||0))});
+
+/* 圖片:以內容雜湊存成獨立文件(超過 900KB 就切成多段) */
+async function syHash(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return [...new Uint8Array(b)].slice(0,16).map(x=>x.toString(16).padStart(2,"0")).join("")}
+async function syStrip(obj,blobs){
+  if(typeof obj==="string"){ if(obj.startsWith("data:image")){const h=await syHash(obj);blobs.set(h,obj);return "blob:"+h} return obj }
+  if(Array.isArray(obj)){const o=[];for(const x of obj) o.push(await syStrip(x,blobs));return o}
+  if(obj&&typeof obj==="object"){const o={};for(const [k,v] of Object.entries(obj)) o[k]=await syStrip(v,blobs);return o}
+  return obj;
+}
+const syDown=new Map();
+async function syBlob(h){
+  if(syDown.has(h)) return syDown.get(h);
+  const first=await syGetDoc(`/blobs/${h}-0`); if(!first) return "";
+  const n=+first.fields.n.integerValue; let s=first.fields.d.stringValue;
+  for(let i=1;i<n;i++){const d=await syGetDoc(`/blobs/${h}-${i}`); s+=d?.fields?.d?.stringValue||""}
+  syDown.set(h,s); return s;
+}
+async function syRestore(obj){
+  if(typeof obj==="string") return obj.startsWith("blob:")?await syBlob(obj.slice(5)):obj;
+  if(Array.isArray(obj)){const o=[];for(const x of obj) o.push(await syRestore(x));return o}
+  if(obj&&typeof obj==="object"){const o={};for(const [k,v] of Object.entries(obj)) o[k]=await syRestore(v);return o}
+  return obj;
+}
+async function syUpBlobs(blobs){
+  const up=new Set(await IDB.getMeta("blobsUp")||[]);
+  for(const [h,s] of blobs){
+    if(up.has(h)) continue;
+    const parts=[];for(let i=0;i<s.length;i+=900000) parts.push(s.slice(i,i+900000));
+    for(let i=0;i<parts.length;i++) await syFS("PATCH",`/blobs/${h}-${i}`,{fields:{d:syStr(parts[i]),n:syInt(parts.length)}});
+    up.add(h); await IDB.putMeta("blobsUp",[...up]);
+  }
+}
+
+/* 變更紀錄 */
+async function syMark(code){const d=new Set(await IDB.getMeta("dirty")||[]);d.add(code);await IDB.putMeta("dirty",[...d]);sySchedule()}
+async function syTomb(code){const t=(await IDB.getMeta("tombs")||[]).filter(x=>x.code!==code);t.push({code,updatedAt:Date.now()});await IDB.putMeta("tombs",t);
+  const d=new Set(await IDB.getMeta("dirty")||[]);d.delete(code);await IDB.putMeta("dirty",[...d]);sySchedule()}
+async function syMetaTouch(){await IDB.putMeta("metaAt",Date.now());sySchedule()}
+function sySchedule(){if(!syAuth()) return; clearTimeout(syTimer); syTimer=setTimeout(()=>syncNow(false),4000)}
+
+function syStatus(t,err){const e=$("#syncNote"); if(!e) return; e.textContent=t; e.classList.toggle("err",!!err)}
+async function syncNow(manual){
+  if(!syAuth()||!syCfg()){ if(manual) toast("請先在設定登入雲端同步"); syStatus(""); return }
+  if(syBusy){syAgain=true;return}
+  syBusy=true; syStatus("同步中…");
+  try{
+    if(!localStorage.getItem(SY_INIT)){ await IDB.putMeta("dirty",items.map(x=>x.code));
+      if(!(await IDB.getMeta("metaAt"))){ const has=!!stdBase.img||Object.keys(stdBase.marks||{}).length||members.some(m=>m.gen||m.body||Object.keys(m.marks||{}).length||m.en||m.name!==MEM_DEF[MEM_IDS.indexOf(m.id)]);
+        await IDB.putMeta("metaAt",has?Date.now():0); } }
+    let changed=false;
+    /* 1. 下載雲端較新的單品 */
+    const since=+(localStorage.getItem(SY_PULL)||0); let maxSeen=since;
+    const res=await syFS("POST",":runQuery",{structuredQuery:{from:[{collectionId:"scripts"}],where:{fieldFilter:{field:{fieldPath:"updatedAt"},op:"GREATER_THAN",value:syInt(since)}}}});
+    const dirty=new Set(await IDB.getMeta("dirty")||[]);
+    for(const row of res){
+      const doc=row.document; if(!doc) continue;
+      const code=decodeURIComponent(doc.name.split("/").pop()), up=+doc.fields.updatedAt.integerValue;
+      maxSeen=Math.max(maxSeen,up);
+      const cur=items.find(x=>x.code===code);
+      if(cur&&(cur.updatedAt||0)>=up) continue;
+      if(doc.fields.deleted?.booleanValue){ if(cur){await IDB.del(code);items=items.filter(x=>x.code!==code);changed=true} dirty.delete(code); continue }
+      syStatus("同步中…下載 "+code);
+      const it=await syRestore(JSON.parse(doc.fields.json.stringValue)); it.updatedAt=up;
+      await IDB.put(it); const i=items.findIndex(x=>x.code===code); i>=0?items[i]=it:items.push(it); dirty.delete(code); changed=true;
+    }
+    await IDB.putMeta("dirty",[...dirty]);
+    /* 2. 成員與標準底模 */
+    const localAt=+(await IDB.getMeta("metaAt")||0), rm=await syGetDoc("/scriptsMeta/state"), remoteAt=rm?+rm.fields.updatedAt.integerValue:0;
+    if(remoteAt>localAt){
+      syStatus("同步中…下載成員資料");
+      const o=await syRestore(JSON.parse(rm.fields.json.stringValue));
+      if(Array.isArray(o.members)) members=MEM_IDS.map((id,i)=>({...members[i],...(o.members.find(x=>x.id===id)||{})}));
+      if(o.std) stdBase={img:"",marks:{},...o.std};
+      await IDB.putMeta("members",members); await IDB.putMeta("std",stdBase); await IDB.putMeta("metaAt",remoteAt); changed=true;
+    }else if(localAt>remoteAt){
+      syStatus("同步中…上傳成員資料");
+      const blobs=new Map(); const json=JSON.stringify(await syStrip({members,std:stdBase},blobs));
+      await syUpBlobs(blobs); await syFS("PATCH","/scriptsMeta/state",{fields:{json:syStr(json),updatedAt:syInt(localAt)}});
+    }
+    /* 3. 上傳本機修改與刪除 */
+    for(const t of await IDB.getMeta("tombs")||[]){
+      await syFS("PATCH",`/scripts/${encodeURIComponent(t.code)}`,{fields:{json:syStr("{}"),updatedAt:syInt(t.updatedAt),deleted:{booleanValue:true}}});
+      maxSeen=Math.max(maxSeen,t.updatedAt);
+    }
+    await IDB.putMeta("tombs",[]);
+    const todo=[...new Set(await IDB.getMeta("dirty")||[])]; let k=0;
+    for(const code of todo){
+      const it=items.find(x=>x.code===code); k++;
+      if(it){ syStatus(`同步中…上傳 ${k}/${todo.length}`);
+        const blobs=new Map(); const json=JSON.stringify(await syStrip(it,blobs));
+        await syUpBlobs(blobs);
+        await syFS("PATCH",`/scripts/${encodeURIComponent(code)}`,{fields:{json:syStr(json),updatedAt:syInt(it.updatedAt),deleted:{booleanValue:false}}});
+        maxSeen=Math.max(maxSeen,it.updatedAt||0); }
+      const d=new Set(await IDB.getMeta("dirty")||[]); d.delete(code); await IDB.putMeta("dirty",[...d]);
+    }
+    localStorage.setItem(SY_PULL,String(maxSeen)); localStorage.setItem(SY_INIT,"1"); syLast=Date.now();
+    if(changed){ renderNav(); showView(view) }
+    syStatus("已同步 "+new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"}));
+    if(manual) toast(changed?"同步完成,已更新本機資料":"同步完成");
+  }catch(e){ syStatus(syMsg(e),true); if(manual) toast(syMsg(e)) }
+  finally{ syBusy=false; if(syAgain){syAgain=false;sySchedule()} }
+}
+function syRenderSettings(){
+  const c=syCfg(), a=syAuth();
+  $("#syCfgInfo").textContent=c?`已設定專案:${c.projectId}`:"還沒設定。";
+  $("#syIn").classList.toggle("hidden",!!a); $("#syOut").classList.toggle("hidden",!a);
+  $("#syWho").textContent=a?`已登入:${a.email}`:"";
+}
+$("#sySaveCfg").onclick=()=>{
+  const t=$("#syCfgIn").value; const k=t.match(/apiKey["'\s:]+["']([^"']+)["']/), p=t.match(/projectId["'\s:]+["']([^"']+)["']/);
+  if(!k||!p){toast("找不到 apiKey 或 projectId,請貼上整段 firebaseConfig");return}
+  localStorage.setItem(SY_CFG,JSON.stringify({apiKey:k[1],projectId:p[1]})); $("#syCfgIn").value=""; syRenderSettings(); toast("Firebase 設定已儲存");
+};
+async function syDoSign(create){
+  const st=$("#syStatus"); st.classList.remove("err"); st.textContent=create?"建立中…":"登入中…";
+  try{ await sySignIn($("#syEmail").value.trim(),$("#syPw").value,create); $("#syPw").value=""; st.textContent="登入成功,開始同步。"; syRenderSettings(); syncNow(true) }
+  catch(e){ st.classList.add("err"); st.textContent=syMsg(e) }
+}
+$("#sySignIn").onclick=()=>syDoSign(false); $("#sySignUp").onclick=()=>syDoSign(true);
+$("#sySignOut").onclick=()=>{localStorage.removeItem(SY_AUTH);localStorage.removeItem(SY_PULL);localStorage.removeItem(SY_INIT);syTok=null;syRenderSettings();syStatus("");toast("已登出,本機資料保留")};
+$("#syNow").onclick=()=>syncNow(true);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&Date.now()-syLast>2*60*1000) syncNow(false) });
+/* ---------- 版本更新檢查 ---------- */
+const isNative=!!window.Capacitor?.isNativePlatform?.();
+let updLatest=null, updLastCheck=0, updDismissed=0;
+async function checkUpdate(manual){
+  updLastCheck=Date.now();
+  if(!window.PAGES_URL||typeof window.APP_BUILD!=="number"){ if(manual) toast("開發版不檢查更新"); return }
+  try{
+    const r=await fetch(window.PAGES_URL+"version.json?t="+Date.now(),{cache:"no-store"}); if(!r.ok) throw 0;
+    const v=await r.json();
+    if(+v.build>window.APP_BUILD){ updLatest=v; if(manual||updDismissed!==+v.build) showUpdate(v) }
+    else if(manual) toast("已經是最新版本");
+  }catch(e){ if(manual) toast("檢查更新失敗,請確認網路") }
+}
+function showUpdate(v){
+  $("#updInfo").textContent=`目前 ${window.APP_VERSION},最新 ${v.version}。`;
+  $("#updNotes").textContent=v.notes?("更新內容:"+String(v.notes).trim().slice(0,400)):"";
+  $("#updHow").textContent=isNative?"按下後會用瀏覽器下載新的安裝檔,下載完點開安裝即可,資料會保留。第一次可能要允許瀏覽器「安裝不明應用程式」。":"按下後會重新載入成新版,資料會保留。";
+  $("#updGo").textContent=isNative?"下載新版":"立即更新";
+  const d=$("#updDlg"); if(!d.open) d.showModal();
+}
+$("#updLater").onclick=()=>{updDismissed=+(updLatest?.build||0);$("#updDlg").close()};
+$("#updBk").onclick=()=>$("#bkOut").click();
+$("#updGo").onclick=async()=>{
+  if(isNative){ const url=window.PAGES_URL+"KPOP-Scripts.apk?v="+(updLatest?.build||Date.now()); const w=window.open(url,"_blank"); if(!w) location.href=url; return }
+  $("#updGo").disabled=true; $("#updGo").textContent="更新中…";
+  try{ await Promise.all(["index.html","version.js","manifest.webmanifest"].map(u=>fetch(u,{cache:"reload"}).catch(()=>{}))) }catch(e){}
+  location.reload();
+};
+$("#updCheck").onclick=()=>checkUpdate(true);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&Date.now()-updLastCheck>30*60*1000) checkUpdate(false) });
+setTimeout(()=>checkUpdate(false),3000);
+if(window.Capacitor?.isNativePlatform?.()) $("#apkBox").classList.add("hidden");
+
+/* ---------- 啟動 ---------- */
+(async()=>{
+  syncKeybar();
+  try{ await IDB.open(); items=await IDB.all(); navigator.storage?.persist?.();
+    $("#storeNote").textContent="資料存在這台裝置裡;在「設定」登入雲端同步後,網頁版和手機會自動同步。"; }
+  catch(e){ $("#storeNote").textContent="無法開啟本機資料庫,資料不會被保存。"; }
+  renderAll(); syRenderSettings(); syncNow(false);
+})();
+</script>
+</body>
+</html>
