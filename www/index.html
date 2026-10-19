@@ -589,8 +589,9 @@ function setUsage(u){try{localStorage.setItem(AK+".use",JSON.stringify(u))}catch
 function msToReset(){const now=new Date(); const pt=new Date(now.toLocaleString("en-US",{timeZone:"America/Los_Angeles"})); const nx=new Date(pt); nx.setHours(24,0,30,0); return nx-pt}
 /* 各關係階段在各時期的比例(戒備多在早期,戀人多在後期) */
 const PW={戒備:[.6,.3,.1,0],信任:[.4,.35,.15,.1],夥伴:[.2,.3,.3,.2],心動:[.1,.3,.35,.25],戀人:[0,.25,.4,.35],pair:[.3,.25,.25,.2]};
-const TYPE_ORDER=["msg","encounter","practice","chat","long","request","friction","surprise","worry","topic","social"];
-const PAIR_ORDER=["between","away","group","pairlong"];
+/* 長對話與雙人長對話改由 Claude 創作室負責,自動生產不再用 Gemini 產生 */
+const TYPE_ORDER=["msg","encounter","practice","chat","request","friction","surprise","worry","topic","social"];
+const PAIR_ORDER=["between","away","group"];
 function nextTask(){
   const L=lib(); const cnt={}; for(const x of L){const k=cellKey(x)+"|"+x.period; cnt[k]=(cnt[k]||0)+1}
   const pend={}; for(const x of reviewQ_()){const k=cellKey(x)+"|"+x.period; pend[k]=(pend[k]||0)+1}
