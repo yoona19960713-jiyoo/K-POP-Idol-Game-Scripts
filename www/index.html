@@ -162,7 +162,8 @@ dialog .in{padding:16px;overflow:auto;max-height:90vh}
         <label>每分鐘最多幾次<input type="number" id="aRpm" min="1" max="60"></label>
         <label>每天最多幾次<input type="number" id="aDay" min="1" max="10000"></label>
       </div>
-      <label class="note row" style="gap:6px;margin-top:8px"><input type="checkbox" id="aAuto"> 格式通過的直接收進內容庫(標為「未審」,之後再慢慢看);沒通過的會重試,仍不行才放進待審</label>
+      <label class="note row" style="gap:6px;margin-top:8px"><input type="checkbox" id="aFb"> 主模型今天的額度用完時,改用 Flash-Lite 繼續(額度分開計算,品質稍低,長對話較常需要重試)</label>
+      <label class="note row" style="gap:6px;margin-top:4px"><input type="checkbox" id="aAuto"> 格式通過的直接收進內容庫(標為「未審」,之後再慢慢看);沒通過的會重試,仍不行才放進待審</label>
       <div class="autobox" id="autoBox"></div>
     </section>
     <section>
@@ -242,7 +243,8 @@ const KEY_K="kpopScripts.geminiKey", KEY_M="kpopScripts.model";
 const apiKey=()=>localStorage.getItem(KEY_K)||"";
 const DEFAULT_MODEL="gemini-flash-latest"; // 永遠指向 Google 最新的 Flash,模型汰換時不用改程式
 const RETIRED=["gemini-2.5-flash","gemini-2.5-flash-lite","gemini-2.0-flash","gemini-2.0-flash-lite"];
-const model=()=>{const m=localStorage.getItem(KEY_M)||DEFAULT_MODEL; return RETIRED.includes(m)?DEFAULT_MODEL:m};
+let modelOverride=""; // 自動生產時,主模型的每日額度用完會暫時改用備用模型
+const model=()=>{if(modelOverride) return modelOverride; const m=localStorage.getItem(KEY_M)||DEFAULT_MODEL; return RETIRED.includes(m)?DEFAULT_MODEL:m};
 
 /* ---------- 本機資料庫(IndexedDB) ---------- */
 const IDB={db:null,
@@ -275,7 +277,14 @@ async function aiJSON(prompt,files,signal){
   const j=await res.json().catch(()=>({}));
   if(!res.ok){
     const raw=JSON.stringify(j); const msg=j?.error?.message||"";
-    if(res.status===429) throw {code:/PerDay|per day|daily/i.test(raw)?"rate_day":"rate_minute",message:msg};
+    if(res.status===429){
+      // 依 Google 回傳的額度明細判斷是「每分鐘」還是「每天」超量,並讀取建議的等待秒數
+      const det=j?.error?.details||[]; const ids=det.flatMap(d=>(d.violations||[]).map(v=>String(v.quotaId||v.quotaMetric||"")));
+      const perMin=ids.some(x=>/PerMinute/i.test(x)), perDay=ids.some(x=>/PerDay/i.test(x));
+      const rd=det.map(d=>d.retryDelay).find(Boolean); const wait=rd?Math.ceil(parseFloat(rd)):0;
+      const day=perDay&&!perMin ? true : (!ids.length && /per ?day|daily/i.test(msg) && !/minute/i.test(msg));
+      throw {code:day?"rate_day":"rate_minute",message:msg,wait};
+    }
     if(res.status===401||res.status===403||/API key/i.test(msg)) throw {code:"bad_key",message:msg};
     if(res.status===404){
       if(model()!==DEFAULT_MODEL){ localStorage.setItem(KEY_M,DEFAULT_MODEL); return aiJSON(prompt,files,signal); } // 模型被停用時自動改回預設
@@ -559,7 +568,7 @@ async function saveMeta(){}
 
 /* ---------- 自動生產:排程、速度與每日額度控管 ---------- */
 const AK="kpopScripts.auto";
-let A={rpm:4,day:200,autoAccept:true}; try{A={...A,...JSON.parse(localStorage.getItem(AK)||"{}")}}catch(e){}
+let A={rpm:4,day:200,autoAccept:true,fallback:true}; try{A={...A,...JSON.parse(localStorage.getItem(AK)||"{}")}}catch(e){}
 const saveA=()=>{try{localStorage.setItem(AK,JSON.stringify(A))}catch(e){}};
 const ptDate=()=>new Date().toLocaleDateString("en-CA",{timeZone:"America/Los_Angeles"});
 function usage(){let u={};try{u=JSON.parse(localStorage.getItem(AK+".use")||"{}")}catch(e){} if(u.d!==ptDate()) u={d:ptDate(),n:0,made:0,fail:0}; if(!u.why) u.why={}; return u}
@@ -593,6 +602,7 @@ async function produce(task){
   const existing=lib().filter(x=>x.type===task.type&&(t.kind==="pair"?x.pair===task.pair:(x.member===task.member&&x.stage===task.stage))).slice(-25).map(x=>x.sc);
   const r=await aiJSON(buildPrompt(task,existing),[]);
   const arr=Array.isArray(r)?r:(r.snippets||[]); let ok=0,bad=[];
+  if(!arr.some(x=>x?.nodes?.start)) throw {code:"invalid_json",message:"回傳裡沒有可用的片段"};
   for(const s0 of arr){ if(!s0?.nodes?.start) continue;
     const sn={code:`${task.type}-${t.kind==="pair"?task.pair:task.member}-${Date.now().toString(36)}${Math.random().toString(36).slice(2,5)}`,
       type:task.type,k:t.n,member:task.member,pair:task.pair,stage:task.stage,period:task.period,
@@ -606,12 +616,16 @@ async function autoLoop(){
   try{wakeLock=await navigator.wakeLock?.request?.("screen")}catch(e){}
   while(running){
     const u=usage();
+    const main=(()=>{const m=localStorage.getItem(KEY_M)||DEFAULT_MODEL; return RETIRED.includes(m)?DEFAULT_MODEL:m})(), FB="gemini-flash-lite-latest";
+    if(!u.outM) u.outM={};
+    modelOverride = !u.outM[main] ? "" : (A.fallback&&main!==FB&&!u.outM[FB] ? FB : "");
+    if(u.outM[main]&&!(A.fallback&&main!==FB&&!u.outM[FB])) u.out=true;
     if(u.n>=A.day||u.out){ aState=u.out?"Google 回報今天的免費額度用完了,等額度重置後自動繼續。":`今天的上限 ${A.day} 次用完了,等額度重置後自動繼續。`; await sleep(msToReset()); continue }
     const task=nextTask(); if(!task){ aState="目標全部完成了!"; running=false; break }
     const gap=60000/Math.max(1,A.rpm); lastCalls=lastCalls.filter(t=>Date.now()-t<60000);
     if(lastCalls.length>=A.rpm){ aState="控制速度中…"; await sleep(60000-(Date.now()-lastCalls[0])+500); continue }
     const last=lastCalls[lastCalls.length-1]||0; if(Date.now()-last<gap){ aState="控制速度中…"; await sleep(gap-(Date.now()-last)); continue }
-    aState=`產生中:${TYPES[task.type].n}・${task.pair?pairName(task.pair):mb(task.member).n}${task.stage?"・"+task.stage:""}・${task.period}`;
+    aState=(modelOverride?"(備用模型)":"")+`產生中:${TYPES[task.type].n}・${task.pair?pairName(task.pair):mb(task.member).n}${task.stage?"・"+task.stage:""}・${task.period}`;
     lastCalls.push(Date.now()); u.n++; setUsage(u);
     try{
       let res=await produce(task); let tries=0;
@@ -620,26 +634,29 @@ async function autoLoop(){
       for(const sn of res.bad){ sn.status="review"; await saveItem(sn) }
       const u3=usage(); u3.made+=res.ok; u3.review=(u3.review||0)+res.bad.length; setUsage(u3);
     }catch(e){
-      const u4=usage(); const why=WHY[e?.code]?e.code:"other"; u4.fail++; u4.why[why]=(u4.why[why]||0)+1;
+      const u4=usage(); const why=WHY[e?.code]?e.code:"other"; if(why==="other"&&!e?.message&&e) e={message:String(e)}; u4.fail++; u4.why[why]=(u4.why[why]||0)+1;
       if(e?.code==="rate_minute"||e?.code==="rate_day") u4.n=Math.max(0,u4.n-1); // 被 Google 以超量拒絕的請求不消耗額度,不算進今天已用
-      if(e?.code==="rate_day") u4.out=true;
+      if(e?.code==="rate_day"){ if(!u4.outM) u4.outM={}; u4.outM[model()]=true }
       setUsage(u4);
-      if(e?.code==="rate_minute"){ aState="每分鐘次數到上限,稍等一下…"; await sleep(65000) }
+      u4.last=`${new Date().toLocaleTimeString("zh-TW",{timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit"})} ${WHY[why]||why}${e?.message?":"+String(e.message).slice(0,120):""}`; setUsage(u4);
+      if(e?.code==="rate_minute"){ aState="每分鐘次數到上限,稍等一下…"; await sleep(Math.max(15,(e.wait||60)+5)*1000) }
       else if(e?.code==="rate_day"){ }
       else if(["no_key","bad_key","bad_model","region"].includes(e?.code)){ aState=ERR[e.code]; running=false }
       else { aState=(ERR[e?.code]||"這次失敗了")+" 30 秒後重試。"; await sleep(30000) }
     }
   }
-  try{await wakeLock?.release?.()}catch(e){} wakeLock=null; renderAuto();
+  modelOverride=""; try{await wakeLock?.release?.()}catch(e){} wakeLock=null; renderAuto();
 }
 const WHY={rate_minute:"每分鐘超量",rate_day:"每日額度用完",blocked:"被安全機制擋下",invalid_json:"回傳格式不完整",server:"Gemini 暫時出錯",network:"網路中斷",other:"其他"};
 function fmtMs(ms){ms=Math.max(0,ms);const h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);return h?`${h} 小時 ${m} 分`:m?`${m} 分 ${s} 秒`:`${s} 秒`}
 function renderAuto(){
-  $("#aRpm").value=A.rpm; $("#aDay").value=A.day; $("#aAuto").checked=A.autoAccept;
+  $("#aRpm").value=A.rpm; $("#aDay").value=A.day; $("#aAuto").checked=A.autoAccept; $("#aFb").checked=A.fallback;
   $("#autoBtn").textContent=running?"停止自動生產":"開始自動生產"; $("#autoBtn").classList.toggle("danger",running);
   const u=usage(), nx=nextTask(); const resetAt=new Date(Date.now()+msToReset()).toLocaleTimeString("zh-TW",{timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit"});
   $("#autoBox").innerHTML=`<div>狀態:<b>${running?(aState||"準備中…"):"未啟動"}</b>${running&&aWait>Date.now()?`(${fmtMs(aWait-Date.now())})`:""}</div>
+    <div>使用模型:${model()}${u.outM&&Object.keys(u.outM).length?`(今天額度已用完:${Object.keys(u.outM).join("、")})`:""}</div>
     <div>今天已用 <b>${u.n}</b> / ${A.day} 次・今天自動收入 <b>${u.made}</b> 個・送審 ${u.review||0} 個・額度約在台灣時間 ${resetAt} 重置</div>
+    ${u.last?`<div class="note">最近一次失敗:${esc(u.last)}</div>`:""}
     <div>失敗 ${u.fail} 次${u.fail?":"+Object.entries(u.why).map(([k,v])=>`${WHY[k]||k} ${v}`).join("、"):""}${(u.why.blocked||0)>=5?"<br><span style=\"color:var(--warn)\">被擋下的次數偏多,多半發生在心動、戀人階段,告訴我,我來調整提示詞。</span>":""}</div>
     <div>下一個要補的格子:${nx?`${TYPES[nx.type].n}・${nx.pair?pairName(nx.pair):mb(nx.member).n}${nx.stage?"・"+nx.stage:""}・${nx.period}`:"全部完成"}</div>`;
 }
@@ -647,6 +664,7 @@ $("#autoBtn").onclick=()=>{ running=!running; if(running){aState="";autoLoop()} 
 $("#aRpm").oninput=e=>{A.rpm=Math.max(1,Math.min(60,+e.target.value||1));saveA()};
 $("#aDay").oninput=e=>{A.day=Math.max(1,+e.target.value||1);saveA()};
 $("#aAuto").onchange=e=>{A.autoAccept=e.target.checked;saveA()};
+$("#aFb").onchange=e=>{A.fallback=e.target.checked;saveA()};
 setInterval(()=>{ if(tab==="make") {renderAuto(); if(++aTick%10===0) renderStats()} },1000);
 
 /* 匯出遊戲格式 */
