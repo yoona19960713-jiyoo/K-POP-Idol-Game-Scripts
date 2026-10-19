@@ -353,6 +353,14 @@ const PAIRS=[];for(let i=0;i<MB.length;i++)for(let j=i+1;j<MB.length;j++)PAIRS.p
 const pairName=p=>p==="all"?"全團":p.split("-").map(x=>mb(x).n).join("×");
 const SINGLE_TYPES=Object.keys(TYPES).filter(k=>TYPES[k].kind==="single"), PAIR_TYPES=Object.keys(TYPES).filter(k=>TYPES[k].kind==="pair");
 
+/* ---------- 世界設定(依《世界設定與時間軸》;只能用這些原創名稱) ---------- */
+const WORLD_BASE="公司:星環娛樂(老牌大公司)、黑鑽(嘻哈 girl crush)、晨光(親民、選秀組團)、方舟音樂(粉絲經營崛起)、楓葉娛樂(藝瑟的前公司)。打歌節目:週二 SHOW PULSE、週三 CHAMPION LIVE、週四 COUNTDOWN M、週五 MUSIC VAULT、週六 CORE STAGE、週日 STAR GAYO。頒獎:NOTE AWARDS(12 月,海外舉辦)、旋律音樂獎(12 月)、金盤獎(1 月)、首爾歌謠大賞(1 月)。音源平台 Melodi,排行榜圓音榜,入口網站 Nexa(熱搜與留言),八卦媒體 D-Scope。頂級製作人團隊 Lighthouse。";
+const WORLD_PERIOD={
+ 練習生期:"這時還沒出道。活躍的女團:RADIANT 9(國民女團)、BLAZE、WONDER POP、SUNNY DAY、PEACH、HARMONY、VELVET ROSE、GLOW(2015 夏天正爆紅)、TWINKLE(2015 年 10 月經選秀出道)。男團 EXON、NOVA。直播平台 Spotlight Live 剛上線。2015 年夏天有中東呼吸症候群疫情。",
+ 出道與上升期:"活躍的女團:GLOW、TWINKLE(2016 年最紅)、VELVET ROSE、HARMONY、PRISM 9(2016 年 5 月由選秀節目 SPOTLIGHT 99 選出的期間限定團)、LUMIÈRE(黑鑽 2016 年 8 月出道,藝瑟的舊同伴是成員)。BLAZE、WONDER POP、SUNNY DAY 在 2016 底到 2017 年陸續解散。2016 年底起中國市場關閉(限韓令)。2017 年 NOVA 在美國頒獎典禮得獎,西方市場打開。",
+ 巔峰期:"活躍的女團:TWINKLE、VELVET ROSE、LUMIÈRE、HARMONY、IRIS 12(2018 年 10 月韓日合作選秀)、ZEST(2019 年出道)。日本市場熱絡,2019 年起短影音平台 Clip 普及;2019 年有娛樂圈大型醜聞,輿論緊縮。",
+ 轉型期:"2020 年起新冠疫情,演唱會全停、打歌無觀眾錄影、線上演唱會;粉絲通訊 Pocket 上線、Clip 舞蹈挑戰是宣傳主力。NEOVERSE(2020 年 11 月)、2022 年 SERAPH、NEW DAY 出道。2022 年疫情解封、巡演回歸,也是第一份七年合約到期的時候。"};
+
 /* ---------- 格式檢查 ---------- */
 function analyse(sn){
   const w=[]; const N=sn.nodes||{}; if(!N.start) return {depth:0,branch:0,warn:["沒有 start 節點"]};
@@ -391,6 +399,11 @@ ${voices}
 
 其他成員 id:${MB.map(m=>`${m.id}=${m.n}`).join("、")}。
 
+【世界設定,提到業界時只能用這些原創名稱】
+${WORLD_BASE}
+這個時期的狀況:${WORLD_PERIOD[p.period]}
+玩家團體的團名尚未決定,台詞裡用「我們」「我們團」稱呼,不要自己取團名。
+
 【寫作規則】
 - 口吻要像她本人,會因關係階段改變語氣;每句台詞自然、口語、有生活感,不要說教。
 - 選項是代表說的話或做的動作(用「」包住說的話,或寫動作),每個選項標一種回應方式 s,只能是:${STYLES.join("、")}。
@@ -399,7 +412,7 @@ ${voices}
 - 可以用 set 記下一個英文小寫駝峰的記憶旗標(例如 hyAnkleAsk),讓之後的劇情記得這件事。
 - 多輪對話用 nodes 樹狀結構:每個節點有 L(台詞陣列)和 C(選項陣列),選項用 next 指向下一個節點的鍵名,沒有 next 就結束,結束時可以用 r 寫她最後的反應。
 - ${t.kind==="pair"?"L 裡可以有多位成員輪流說話。":"L 裡以主角為主,其他成員可以偶爾出現。"}
-- 以情感為主,不寫露骨內容;不要出現真實的人名、團名或公司名。
+- 以情感為主,不寫露骨內容;不要出現真實的人名、團名、公司名或節目名,一律用上面的原創名稱。
 ${existing.length?`- 這一格已經有以下情境,請避免重複:\n${existing.map(x=>"  · "+x).join("\n")}`:""}
 
 【只回覆 JSON】
