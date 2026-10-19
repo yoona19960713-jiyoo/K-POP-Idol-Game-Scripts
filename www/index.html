@@ -138,6 +138,8 @@ dialog .in{padding:16px;overflow:auto;max-height:90vh}
 .pl{margin:6px 0}.pl b{font-size:12px;display:block}.pl .bub{background:var(--card2);border-radius:4px 12px 12px 12px;padding:6px 10px;display:inline-block}
 .pl.me{text-align:right}.pl.me .bub{background:var(--text,#24182D);color:var(--bg,#fff);border-radius:12px 4px 12px 12px}
 .choices{display:flex;flex-direction:column;gap:6px;margin-top:10px}.choice{border:1px solid var(--line);background:transparent;border-radius:10px;padding:8px 10px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.autobox{margin-top:10px;font-size:14px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.autobox b{font-variant-numeric:tabular-nums}
 .choice small{color:var(--muted);margin-left:6px;font-size:12px}
 </style>
 </head>
@@ -154,7 +156,17 @@ dialog .in{padding:16px;overflow:auto;max-height:90vh}
 
   <div id="v_make">
     <section>
-      <h2>產生一批</h2>
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">自動生產</h2><button class="btn pri" id="autoBtn">開始自動生產</button></div>
+      <p class="note">依覆蓋率由最常用的開始補:練習生期優先、關係階段由淺到深、五位成員輪流。會自己控管每分鐘次數與每日上限,碰到上限就等待,額度重置後自動繼續。這個頁面要保持開著(建議用電腦的瀏覽器分頁),手機切到背景會暫停。</p>
+      <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-top:8px">
+        <label>每分鐘最多幾次<input type="number" id="aRpm" min="1" max="60"></label>
+        <label>每天最多幾次<input type="number" id="aDay" min="1" max="10000"></label>
+      </div>
+      <label class="note row" style="gap:6px;margin-top:8px"><input type="checkbox" id="aAuto"> 格式通過的直接收進內容庫(標為「未審」,之後再慢慢看);沒通過的會重試,仍不行才放進待審</label>
+      <div class="autobox" id="autoBox"></div>
+    </section>
+    <section>
+      <h2>手動產生一批</h2>
       <label class="lbl">種類</label><div class="cats" id="tType"></div>
       <div id="rowMember"><label class="lbl">主角</label><div class="cats" id="tMember"></div></div>
       <div id="rowPair" class="hidden"><label class="lbl">組合</label><div class="cats" id="tPair"></div></div>
@@ -386,9 +398,10 @@ ${existing.length?`- 這一格已經有以下情境,請避免重複:\n${existing
 }
 
 /* ---------- 狀態與介面 ---------- */
-let tab="make", reviewQ=[];
+let tab="make";
+const reviewQ_=()=>items.filter(x=>x.status==="review");
 let P={type:"long",member:"ys",pair:"ys-tr",stage:"戒備",period:"練習生期",count:2,hint:""};
-const lib=()=>items.filter(x=>x.status==="ok");
+const lib=()=>items.filter(x=>x.status==="ok"||x.status==="auto");
 function cellKey(sn){return sn.type+"|"+(TYPES[sn.type]?.kind==="pair"?sn.pair:sn.member)+"|"+(TYPES[sn.type]?.kind==="pair"?"":sn.stage)}
 function chips(el,list,cur,key,label){$(el).innerHTML=list.map(v=>`<button class="chipbtn" data-${key}="${v}" aria-pressed="${v===cur}">${label?label(v):v}</button>`).join("")}
 function renderMake(){
@@ -423,7 +436,7 @@ async function generate(params){
         type:params.type,k:t.n,member:t.kind==="single"?params.member:"",pair:t.kind==="pair"?params.pair:"",stage:t.kind==="single"?params.stage:"",period:params.period,
         at:t.places.includes(s0.at)?s0.at:t.places[0],sl:(Array.isArray(s0.sl)?s0.sl:[2]).filter(x=>x>=0&&x<=4),who:Array.isArray(s0.who)?s0.who.filter(x=>mb(x)):[params.member],
         sc:String(s0.sc||""),w:+s0.w||3,cd:+s0.cd||4,nodes:s0.nodes,status:"review",createdAt:Date.now(),params:{...params}};
-      reviewQ.push(sn); n++ }
+      await saveItem(sn); n++ }
     st.textContent=n?`產生了 ${n} 個,請到下方審稿。`:"這次沒有產生可用的片段,請再試一次。"; renderReview();
   }catch(e){ if(e?.code==="cancelled") st.textContent="已停止。"; else {st.textContent=ERR[e?.code]||"生成失敗,請再試一次。";st.classList.add("err")} }
   finally{ $("#go").disabled=false; $("#stop").classList.add("hidden") }
@@ -443,30 +456,31 @@ function cardHTML(sn,mode){
   return `<div class="card sn" data-code="${esc(sn.code)}">
     <div class="row" style="justify-content:space-between;align-items:flex-start"><div><b>${esc(TYPES[sn.type]?.n||sn.type)}・${esc(who)}${sn.stage?"・"+esc(sn.stage):""}・${esc(sn.period)}</b>
       <div class="note">${esc(PLACES[sn.at]||sn.at)}・${(sn.sl||[]).map(x=>SLOTS[x]).join("、")}・最長 ${a.depth} 個來回・${a.branch} 個分岔點</div></div>
-      <span class="vs ${a.warn.length?"vs1":"vs3"}">${a.warn.length?"有 "+a.warn.length+" 個提醒":"格式通過"}</span></div>
+      <span class="vs ${a.warn.length?"vs1":"vs3"}">${a.warn.length?"有 "+a.warn.length+" 個提醒":(sn.status==="auto"?"未審・格式通過":"格式通過")}</span></div>
     <p class="scene">${esc(sn.sc)}</p>
     ${a.warn.length?`<ul class="warnl">${a.warn.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}
     <details ${mode==="review"?"open":""}><summary class="note">展開對話樹</summary><div class="tree">${treeHTML(sn)}</div></details>
-    <div class="row" style="margin-top:8px">${mode==="review"?`<button class="btn sm pri" data-ok>收入內容庫</button><button class="btn sm" data-regen>這格再生一個</button>`:""}
+    <div class="row" style="margin-top:8px">${mode==="review"?`<button class="btn sm pri" data-ok>收入內容庫</button><button class="btn sm" data-regen>這格再生一個</button>`:(sn.status==="auto"?`<button class="btn sm pri" data-ok>標為審過</button>`:"")}
       <button class="btn sm" data-play>試玩</button><button class="btn sm" data-edit>編輯</button><button class="btn sm danger" data-drop>${mode==="review"?"丟掉":"刪除"}</button></div></div>`;
 }
 function bindCards(root,mode){
   root.querySelectorAll(".sn").forEach(card=>{
-    const code=card.dataset.code; const get=()=>mode==="review"?reviewQ.find(x=>x.code===code):items.find(x=>x.code===code);
-    const ok=card.querySelector("[data-ok]"); if(ok) ok.onclick=async()=>{const sn=get(); sn.status="ok"; await saveItem(sn); reviewQ=reviewQ.filter(x=>x.code!==code); renderReview(); toast("已收入內容庫")};
+    const code=card.dataset.code; const get=()=>items.find(x=>x.code===code);
+    const ok=card.querySelector("[data-ok]"); if(ok) ok.onclick=async()=>{const sn=get(); const was=sn.status; sn.status="ok"; await saveItem(sn); toast(was==="auto"?"已標為審過":"已收入內容庫")};
     const rg=card.querySelector("[data-regen]"); if(rg) rg.onclick=()=>{const sn=get(); generate({...sn.params,count:1})};
     card.querySelector("[data-play]").onclick=()=>play(get());
     card.querySelector("[data-edit]").onclick=()=>editJSON(get(),mode);
-    card.querySelector("[data-drop]").onclick=async()=>{ if(mode==="review"){reviewQ=reviewQ.filter(x=>x.code!==code);renderReview()} else {await removeItem(code);toast("已刪除")} };
+    card.querySelector("[data-drop]").onclick=async()=>{ await removeItem(code); toast(mode==="review"?"已丟掉":"已刪除") };
   });
 }
 function renderReview(){
-  $("#revCount").textContent=reviewQ.length?`(${reviewQ.length})`:"";
-  $("#review").innerHTML=reviewQ.length?reviewQ.map(sn=>cardHTML(sn,"review")).join(""):`<div class="empty">還沒有待審的片段。</div>`;
+  const Q=reviewQ_();
+  $("#revCount").textContent=Q.length?`(${Q.length})`:"";
+  $("#review").innerHTML=Q.length?Q.slice(0,40).map(sn=>cardHTML(sn,"review")).join("")+(Q.length>40?`<p class="note">還有 ${Q.length-40} 個,先處理上面的。</p>`:""):`<div class="empty">還沒有待審的片段。</div>`;
   bindCards($("#review"),"review");
-  $("#okAll").classList.toggle("hidden",!reviewQ.some(x=>!analyse(x).warn.length));
+  $("#okAll").classList.toggle("hidden",!Q.some(x=>!analyse(x).warn.length));
 }
-$("#okAll").onclick=async()=>{const pass=reviewQ.filter(x=>!analyse(x).warn.length); for(const sn of pass){sn.status="ok"; await saveItem(sn)} reviewQ=reviewQ.filter(x=>analyse(x).warn.length); renderReview(); toast(`收入 ${pass.length} 個`)};
+$("#okAll").onclick=async()=>{const pass=reviewQ_().filter(x=>!analyse(x).warn.length); for(const sn of pass){sn.status="ok"; await IDB.put({...sn,updatedAt:Date.now()}); syMark(sn.code); Object.assign(items.find(x=>x.code===sn.code),{status:"ok"})} renderAll(); toast(`收入 ${pass.length} 個`)};
 
 /* 編輯 JSON */
 function editJSON(sn,mode){
@@ -475,7 +489,7 @@ function editJSON(sn,mode){
     <textarea id="ej" style="width:100%;min-height:55vh;font-family:ui-monospace,Menlo,monospace;font-size:12px">${esc(JSON.stringify({sc,at,sl,who,w,cd,nodes},null,2))}</textarea>
     <div class="row" style="margin-top:8px;justify-content:flex-end"><button class="btn" id="ejc">取消</button><button class="btn pri" id="ejs">儲存</button></div>`;
   $("#ejc").onclick=()=>$("#dlg").close();
-  $("#ejs").onclick=async()=>{try{const o=JSON.parse($("#ej").value); Object.assign(sn,o); if(mode==="lib") await saveItem(sn); else renderReview(); $("#dlg").close(); toast("已更新")}catch(e){toast("JSON 格式有誤,請檢查逗號與括號")}};
+  $("#ejs").onclick=async()=>{try{const o=JSON.parse($("#ej").value); Object.assign(sn,o); await saveItem(sn); $("#dlg").close(); toast("已更新")}catch(e){toast("JSON 格式有誤,請檢查逗號與括號")}};
   if(!$("#dlg").open) $("#dlg").showModal();
 }
 
@@ -502,7 +516,7 @@ function play(sn){
 /* 內容庫與覆蓋率 */
 function renderLib(){
   const fm=$("#fM").value, ft=$("#fT").value, fs=$("#fS").value, q=$("#fQ").value.trim();
-  const list=lib().filter(x=>(!fm||x.member===fm||(x.pair||"").includes(fm))&&(!ft||x.type===ft)&&(!fs||x.stage===fs)&&(!q||JSON.stringify(x.nodes).includes(q)||x.sc.includes(q)))
+  const list=lib().filter(x=>(!fm||x.member===fm||(x.pair||"").includes(fm))&&(!ft||x.type===ft)&&(!fs||(fs==="__auto"?x.status==="auto":x.stage===fs))&&(!q||JSON.stringify(x.nodes).includes(q)||x.sc.includes(q)))
     .sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   $("#libInfo").textContent=`內容庫共 ${lib().length} 個,符合條件 ${list.length} 個${list.length>60?",只顯示最新 60 個":""}。`;
   $("#libList").innerHTML=list.slice(0,60).map(sn=>cardHTML(sn,"lib")).join("")||`<div class="empty">還沒有內容。</div>`;
@@ -511,7 +525,7 @@ function renderLib(){
 ["fM","fT","fS"].forEach(id=>$("#"+id).onchange=renderLib); $("#fQ").oninput=renderLib;
 $("#fM").innerHTML='<option value="">全部成員</option>'+MB.map(m=>`<option value="${m.id}">${m.n}</option>`).join("");
 $("#fT").innerHTML='<option value="">全部種類</option>'+Object.entries(TYPES).map(([k,t])=>`<option value="${k}">${t.n}</option>`).join("");
-$("#fS").innerHTML='<option value="">全部階段</option>'+STAGES.map(s=>`<option>${s}</option>`).join("");
+$("#fS").innerHTML='<option value="">全部階段</option>'+STAGES.map(s=>`<option>${s}</option>`).join("")+'<option value="__auto">只看未審</option>';
 function heat(n,t){const r=Math.min(1,n/t);return `background:color-mix(in srgb, var(--good) ${Math.round(r*85)}%, var(--card2))`}
 function renderCover(){
   const L=lib(); const cnt={}; for(const x of L){const k=cellKey(x); cnt[k]=(cnt[k]||0)+1}
@@ -527,11 +541,11 @@ function renderCover(){
   document.querySelectorAll("[data-cell]").forEach(b=>b.onclick=()=>{const [k,m,s]=b.dataset.cell.split("|");P={...P,type:k,member:m,stage:s,count:TYPES[k].batch};showTab("make")});
   document.querySelectorAll("[data-pcell]").forEach(b=>b.onclick=()=>{const [k,p]=b.dataset.pcell.split("|");P={...P,type:k,pair:p,count:TYPES[k].batch};showTab("make")});
 }
-function renderStats(){const L=lib();$("#stats").innerHTML=`<span><b>${L.length}</b>內容庫</span><span><b>${reviewQ.length}</b>待審</span><span><b>${L.filter(x=>x.type==="long").length}</b>長對話</span>`}
+function renderStats(){const L=lib();$("#stats").innerHTML=`<span><b>${L.length}</b>內容庫</span><span><b>${L.filter(x=>x.status==="auto").length}</b>未審</span><span><b>${reviewQ_().length}</b>待審</span><span><b>${L.filter(x=>x.type==="long"||x.type==="pairlong").length}</b>長對話</span>`}
 function showTab(t){tab=t; document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===t));
   ["make","lib","cover"].forEach(k=>$("#v_"+k).classList.toggle("hidden",k!==t)); renderAll(); window.scrollTo(0,0)}
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
-function renderAll(){renderStats(); if(tab==="make"){renderMake();renderReview()} if(tab==="lib") renderLib(); if(tab==="cover") renderCover()}
+function renderAll(){renderStats(); if(tab==="make"){renderMake();renderReview();renderAuto()} if(tab==="lib") renderLib(); if(tab==="cover") renderCover()}
 
 /* 儲存 */
 async function saveItem(it){const body={...it}; body.updatedAt=Date.now(); await IDB.put(body); syMark(body.code);
@@ -541,6 +555,94 @@ async function removeItem(code){await IDB.del(code); syTomb(code); items=items.f
 let members=[], stdBase={img:"",marks:{}}; const MEM_IDS=[], MEM_DEF=[]; let view="make";
 function renderNav(){} function showView(){renderAll()}
 async function saveMeta(){}
+
+
+/* ---------- 自動生產:排程、速度與每日額度控管 ---------- */
+const AK="kpopScripts.auto";
+let A={rpm:4,day:200,autoAccept:true}; try{A={...A,...JSON.parse(localStorage.getItem(AK)||"{}")}}catch(e){}
+const saveA=()=>{try{localStorage.setItem(AK,JSON.stringify(A))}catch(e){}};
+const ptDate=()=>new Date().toLocaleDateString("en-CA",{timeZone:"America/Los_Angeles"});
+function usage(){let u={};try{u=JSON.parse(localStorage.getItem(AK+".use")||"{}")}catch(e){} if(u.d!==ptDate()) u={d:ptDate(),n:0,made:0,fail:0}; return u}
+function setUsage(u){try{localStorage.setItem(AK+".use",JSON.stringify(u))}catch(e){}}
+function msToReset(){const now=new Date(); const pt=new Date(now.toLocaleString("en-US",{timeZone:"America/Los_Angeles"})); const nx=new Date(pt); nx.setHours(24,0,30,0); return nx-pt}
+/* 各關係階段在各時期的比例(戒備多在早期,戀人多在後期) */
+const PW={戒備:[.6,.3,.1,0],信任:[.4,.35,.15,.1],夥伴:[.2,.3,.3,.2],心動:[.1,.3,.35,.25],戀人:[0,.25,.4,.35],pair:[.3,.25,.25,.2]};
+const TYPE_ORDER=["msg","encounter","practice","chat","long","request","friction","surprise","worry","topic","social"];
+const PAIR_ORDER=["between","away","group","pairlong"];
+function nextTask(){
+  const L=lib(); const cnt={}; for(const x of L){const k=cellKey(x)+"|"+x.period; cnt[k]=(cnt[k]||0)+1}
+  const pend={}; for(const x of reviewQ_()){const k=cellKey(x)+"|"+x.period; pend[k]=(pend[k]||0)+1}
+  for(let pi=0;pi<PERIODS.length;pi++){ const per=PERIODS[pi];
+    for(const st of STAGES){ for(const ty of TYPE_ORDER){
+      // 五位成員輪流:先找缺最多的那位
+      let best=null,gap=0;
+      for(const m of MB){const tgt=Math.round(TYPES[ty].target*PW[st][pi]); const have=(cnt[ty+"|"+m.id+"|"+st+"|"+per]||0)+(pend[ty+"|"+m.id+"|"+st+"|"+per]||0); if(tgt-have>gap){gap=tgt-have;best=m.id}}
+      if(best) return {type:ty,member:best,pair:"",stage:st,period:per,count:Math.min(TYPES[ty].batch,gap),hint:""};
+    }}
+    for(const ty of PAIR_ORDER){ let best=null,gap=0;
+      for(const p of PAIRS){const tgt=Math.round(TYPES[ty].target*(p==="all"?5:1)*PW.pair[pi]); const have=(cnt[ty+"|"+p+"||"+per]||0)+(pend[ty+"|"+p+"||"+per]||0); if(tgt-have>gap){gap=tgt-have;best=p}}
+      if(best) return {type:ty,member:"",pair:best,stage:"",period:per,count:Math.min(TYPES[ty].batch,gap),hint:""};
+    }
+  }
+  return null;
+}
+let running=false, wakeLock=null, lastCalls=[], aState="", aWait=0, aTick=0;
+const sleep=ms=>new Promise(r=>{const t0=Date.now(); aWait=Date.now()+ms; const iv=setInterval(()=>{ if(!running||Date.now()>=aWait){clearInterval(iv);r()} },500)});
+async function produce(task){
+  const t=TYPES[task.type];
+  const existing=lib().filter(x=>x.type===task.type&&(t.kind==="pair"?x.pair===task.pair:(x.member===task.member&&x.stage===task.stage))).slice(-25).map(x=>x.sc);
+  const r=await aiJSON(buildPrompt(task,existing),[]);
+  const arr=Array.isArray(r)?r:(r.snippets||[]); let ok=0,bad=[];
+  for(const s0 of arr){ if(!s0?.nodes?.start) continue;
+    const sn={code:`${task.type}-${t.kind==="pair"?task.pair:task.member}-${Date.now().toString(36)}${Math.random().toString(36).slice(2,5)}`,
+      type:task.type,k:t.n,member:task.member,pair:task.pair,stage:task.stage,period:task.period,
+      at:t.places.includes(s0.at)?s0.at:t.places[0],sl:(Array.isArray(s0.sl)?s0.sl:[2]).filter(x=>x>=0&&x<=4),who:Array.isArray(s0.who)?s0.who.filter(x=>mb(x)):[task.member],
+      sc:String(s0.sc||""),w:+s0.w||3,cd:+s0.cd||4,nodes:s0.nodes,createdAt:Date.now(),params:{...task}};
+    const pass=!analyse(sn).warn.length;
+    if(pass&&A.autoAccept){sn.status="auto"; await saveItem(sn); ok++} else bad.push(sn) }
+  return {ok,bad,total:arr.length};
+}
+async function autoLoop(){
+  try{wakeLock=await navigator.wakeLock?.request?.("screen")}catch(e){}
+  while(running){
+    const u=usage();
+    if(u.n>=A.day){ aState=`今天的上限 ${A.day} 次用完了,等額度重置後自動繼續。`; await sleep(msToReset()); continue }
+    const task=nextTask(); if(!task){ aState="目標全部完成了!"; running=false; break }
+    const gap=60000/Math.max(1,A.rpm); lastCalls=lastCalls.filter(t=>Date.now()-t<60000);
+    if(lastCalls.length>=A.rpm){ aState="控制速度中…"; await sleep(60000-(Date.now()-lastCalls[0])+500); continue }
+    const last=lastCalls[lastCalls.length-1]||0; if(Date.now()-last<gap){ aState="控制速度中…"; await sleep(gap-(Date.now()-last)); continue }
+    aState=`產生中:${TYPES[task.type].n}・${task.pair?pairName(task.pair):mb(task.member).n}${task.stage?"・"+task.stage:""}・${task.period}`;
+    lastCalls.push(Date.now()); u.n++; setUsage(u);
+    try{
+      let res=await produce(task); let tries=0;
+      while(res.bad.length&&tries<1&&running){ tries++; lastCalls.push(Date.now()); const u2=usage(); u2.n++; setUsage(u2); await sleep(gap);
+        const r2=await produce({...task,count:res.bad.length}); res={ok:res.ok+r2.ok,bad:r2.bad,total:res.total} }
+      for(const sn of res.bad){ sn.status="review"; await saveItem(sn) }
+      const u3=usage(); u3.made+=res.ok; setUsage(u3);
+    }catch(e){
+      const u4=usage(); u4.fail++; setUsage(u4);
+      if(e?.code==="rate_minute"){ aState="每分鐘次數到上限,稍等一下…"; await sleep(65000) }
+      else if(e?.code==="rate_day"){ const u5=usage(); u5.n=A.day; setUsage(u5) }
+      else if(["no_key","bad_key","bad_model","region"].includes(e?.code)){ aState=ERR[e.code]; running=false }
+      else { aState=(ERR[e?.code]||"這次失敗了")+" 30 秒後重試。"; await sleep(30000) }
+    }
+  }
+  try{await wakeLock?.release?.()}catch(e){} wakeLock=null; renderAuto();
+}
+function fmtMs(ms){ms=Math.max(0,ms);const h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);return h?`${h} 小時 ${m} 分`:m?`${m} 分 ${s} 秒`:`${s} 秒`}
+function renderAuto(){
+  $("#aRpm").value=A.rpm; $("#aDay").value=A.day; $("#aAuto").checked=A.autoAccept;
+  $("#autoBtn").textContent=running?"停止自動生產":"開始自動生產"; $("#autoBtn").classList.toggle("danger",running);
+  const u=usage(), nx=nextTask(); const resetAt=new Date(Date.now()+msToReset()).toLocaleTimeString("zh-TW",{timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit"});
+  $("#autoBox").innerHTML=`<div>狀態:<b>${running?(aState||"準備中…"):"未啟動"}</b>${running&&aWait>Date.now()?`(${fmtMs(aWait-Date.now())})`:""}</div>
+    <div>今天已用 <b>${u.n}</b> / ${A.day} 次・今天自動收入 <b>${u.made}</b> 個・失敗 ${u.fail} 次・額度約在台灣時間 ${resetAt} 重置</div>
+    <div>下一個要補的格子:${nx?`${TYPES[nx.type].n}・${nx.pair?pairName(nx.pair):mb(nx.member).n}${nx.stage?"・"+nx.stage:""}・${nx.period}`:"全部完成"}</div>`;
+}
+$("#autoBtn").onclick=()=>{ running=!running; if(running){aState="";autoLoop()} renderAuto() };
+$("#aRpm").oninput=e=>{A.rpm=Math.max(1,Math.min(60,+e.target.value||1));saveA()};
+$("#aDay").oninput=e=>{A.day=Math.max(1,+e.target.value||1);saveA()};
+$("#aAuto").onchange=e=>{A.autoAccept=e.target.checked;saveA()};
+setInterval(()=>{ if(tab==="make") {renderAuto(); if(++aTick%10===0) renderStats()} },1000);
 
 /* 匯出遊戲格式 */
 $("#expGame").onclick=()=>offer(`日常內容庫_${stampName()}.json`,new Blob([JSON.stringify({format:"kpop-daily-v1",exported:new Date().toISOString(),snippets:lib().map(({code,type,k,member,pair,stage,period,at,sl,who,sc,w,cd,nodes})=>({id:code,type,k,member,pair,stage,period,at,sl,who,sc,w,cd,nodes}))},null,1)],{type:"application/json"}));
